@@ -1,0 +1,46 @@
+plugins {
+    id 'java'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+    id "com.gradle.plugin-publish" version "0.10.1"
+}
+
+group 'dev.bmac.intellij.plugins'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile gradleApi()
+    compile "com.squareup.okhttp3:okhttp:4.2.2"
+    compile "javax.xml.bind:jaxb-api:2.3.1"
+    compile "com.sun.xml.bind:jaxb-impl:2.3.3-b02"
+    testCompile "com.squareup.okhttp3:mockwebserver:4.3.1"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+gradlePlugin {
+    plugins {
+        pluginUploader {
+            id = 'dev.bmac.intellij.plugin-uploader'
+            implementationClass = 'dev.bmac.gradle.intellij.IntellijPublishPlugin'
+        }
+    }
+}
+
+pluginBundle {
+    description = 'Manages uploading and updating updatePlugins.xml for IntelliJ plugins to a private repository'
+    vcsUrl = 'https://github.com/brian-mcnamara/plugin_uploader'
+    website = 'https://github.com/brian-mcnamara/plugin_uploader'
+    tags = ['IntelliJ', "plugins", "updatePlugins.xml"]
+
+    plugins {
+        pluginUploader {
+            displayName = 'IntelliJ plugin publisher'
+        }
+    }
+}
