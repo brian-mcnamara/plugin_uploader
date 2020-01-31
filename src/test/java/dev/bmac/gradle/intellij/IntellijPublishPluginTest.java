@@ -84,7 +84,7 @@ public class IntellijPublishPluginTest {
         String updatePluginExpected = new String(baos.toByteArray());
 
         //Check for lock
-        webServer.enqueue(new MockResponse().setResponseCode(401));
+        webServer.enqueue(new MockResponse().setResponseCode(404));
         //Set lock
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //return lock
@@ -92,7 +92,7 @@ public class IntellijPublishPluginTest {
         //Upload file
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //Get updatePlugin.xml
-        webServer.enqueue(new MockResponse().setResponseCode(401));
+        webServer.enqueue(new MockResponse().setResponseCode(404));
         //Post updatePlugin
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //return lock
@@ -158,7 +158,7 @@ public class IntellijPublishPluginTest {
     public void testPluginLockChanged() {
 
         //Check for lock
-        webServer.enqueue(new MockResponse().setResponseCode(401));
+        webServer.enqueue(new MockResponse().setResponseCode(404));
         //Set the lock
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //return changed lock

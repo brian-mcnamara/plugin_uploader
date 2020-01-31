@@ -5,6 +5,16 @@ A gradle plugin to take care of uploading and updating updatePlugins.xml hosted 
 ## Usage
 
 ```groovy
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id "dev.bmac.intellij.plugin-uploader" version "1.0.1"
+}
+
 uploadPlugin {
     def archive = project.tasks.buildPlugin as Zip
     host 'https://repo.example.com/intellij/plugins/'

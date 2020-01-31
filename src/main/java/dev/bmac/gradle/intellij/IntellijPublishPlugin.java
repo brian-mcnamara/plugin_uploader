@@ -149,7 +149,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
                 .build();
 
         try (Response response = CLIENT.newCall(request).execute()) {
-            if (response.code() == 401) {
+            if (response.code() == 404) {
                 System.out.println("No pluginUpdates.xml found");
                 return new PluginUpdates();
             } else if (response.isSuccessful()) {
@@ -175,7 +175,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
                 .build();
 
         try (Response response = CLIENT.newCall(request).execute()) {
-            if (response.code() == 401) {
+            if (response.code() == 404) {
                 return null;
             } else if (response.isSuccessful()) {
                 ResponseBody body = response.body();
