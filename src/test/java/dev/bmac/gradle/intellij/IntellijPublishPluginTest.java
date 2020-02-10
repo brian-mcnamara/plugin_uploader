@@ -171,4 +171,12 @@ public class IntellijPublishPluginTest {
             assertTrue(e.getMessage().contains("claimed the lock"));
         }
     }
+
+    @Test
+    public void testPluginUpdateEncoding() {
+        extension.setPluginName("plugin with space");
+        PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
+
+        assertEquals("./plugin%20with%20space/" + testFile.getName(), plugin.getUrl());
+    }
 }

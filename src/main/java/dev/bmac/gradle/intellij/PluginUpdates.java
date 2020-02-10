@@ -1,5 +1,6 @@
 package dev.bmac.gradle.intellij;
 
+import com.google.common.net.UrlEscapers;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
@@ -41,7 +42,8 @@ public class PluginUpdates {
             this.version = extension.getVersion();
             this.description = extension.getDescription();
             this.changeNotes = extension.getChangeNotes();
-            this.url = "./" + extension.getPluginName() + "/" + extension.getFile().getName();
+            this.url = UrlEscapers.urlFragmentEscaper().escape("./" + extension.getPluginName() + "/" + extension.getFile().getName());
+
 
             if (extension.getUntilBuild() != null || extension.getSinceBuild() != null) {
                 versionInfo = new IdeaVersion(extension.getSinceBuild(), extension.getUntilBuild());
