@@ -33,13 +33,20 @@ uploadPlugin {
 
 | Attributes | Values | 
 | :------------- | :--------- |
-| host | The host plus path of the repository to post the plugin to |
-| pluginName | The plugin name to be used in the upload path such that host + pluginName is the folder the plugin will be uploaded to |
-| file | The file to be uploaded to the repo under host + pluginName + file.getName() |
-| pluginId | Plugin Id used to match in the updatePlugins.xml
-| version | Plugin version used to update updatePlugins.xml | 
-| description | *Optional* Plugins description to be used in updatePlugins.xml | 
-| changeNotes | *Optional* Plugins change notes to be used in updatePlugins.xml |
-| authentication | *Optional* Authentication string used to publish files to the private repo. Will be used as the authorization header |
-| updateFile | *Optional* Overrides the default update file name. Defaults to 'updatePlugins.xml' |
-| writeToUpdateXml | *Optional* Gates whether updatePlugins.xml is updated. Defaults to 'true' |
+| <kbd>host</kbd> - The host plus path of the repository to post the plugin to | **Required:** true <br/> **Acceptable Values:** <ul> <li>`https://repo.example.com/intellij/plugins` </li> <li>`http://repo.example.com:4443`</li></ul> |
+| <kbd>pluginName</kbd> - The plugin name to be used in the upload path such that host + pluginName is the folder the plugin will be uploaded to <br/><br/>**Note:** Name will be escaped when used as the upload path | **Required:** true <br/> **Acceptable Values:** Any String|
+| <kbd>file</kbd> - The file to be uploaded to the repo under host + pluginName + file.getName() |  **Required:** true <br/> **Acceptable Values:** A existing file path, ideally should be set via `project.tasks.buildPlugin as Zip` which grabs the file from the IntelliJ gradle plugin |
+| <kbd>pluginId</kbd> - Plugin Id used to match in the updatePlugins.xml | **Required:** true <br/> **Acceptable Values:** Any String|
+| <kbd>version</kbd> - Plugin version used to update updatePlugins.xml | **Required:** true <br/> **Acceptable Values:** Any String| 
+| <kbd>description</kbd> - Plugins description to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String| 
+| <kbd>changeNotes</kbd> - Plugins change notes to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String|
+| <kbd>authentication</kbd> - Authentication string used to publish files to the private repo. Will be used as the authorization header | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** <ul> <li> `Basic [authenticationString]` </li> <li> `Bearer [bearerToken] ` </li> </ul>
+| <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String |
+| <kbd>writeToUpdateXml</kbd> - Gates whether updatePlugins.xml is updated. | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false` |
+
+## Notes
+
+This plugin uses a lock file to prevent concurrent modifications to the updatePlugins.xml file.
+While the lock file will be cleaned up, it could be left behind if the process is forcefully interrupted
+requiring the lock to be deleted manually. The lock can be found in the <kbd>host</kbd> root and is named `updatePlugins.xml.lock`
+(lock file name depends on <kbd>updateFile</kbd>)
