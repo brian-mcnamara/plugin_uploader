@@ -6,12 +6,15 @@ import java.io.File;
  * Created by brian.mcnamara on Jan 29 2020
  **/
 public class UploadPluginExtension {
+    public static final String UPDATE_PLUGINS_FILENAME = "updatePlugins.xml";
     //The host of the repository where updatePlugins.xml and the plugin zips will be placed
     private String host;
     //The plugin name
     private String pluginName;
     //The plugin file to upload
     private File file;
+    //Name of the plugin update file.
+    private String updateFile = UPDATE_PLUGINS_FILENAME;
     //The plugin unique id
     private String pluginId;
     //Plugin version
@@ -22,8 +25,8 @@ public class UploadPluginExtension {
     private String description;
     //Change notes to be added (optional)
     private String changeNotes;
-    //Whether this is a production version or EAP
-    private boolean isProduction = false;
+    //Whether to update {@link updateFile}
+    private boolean writeToUpdateXml = true;
     //Since idea build to prevent installs with earlier versions (optional)
     private String sinceBuild;
     //Until build to also prevent installs with newer versions (optional)
@@ -61,12 +64,12 @@ public class UploadPluginExtension {
         this.file = file;
     }
 
-    public boolean isProduction() {
-        return isProduction;
+    public boolean writeToUpdateXml() {
+        return writeToUpdateXml;
     }
 
-    public void setProduction(boolean production) {
-        isProduction = production;
+    public void setWriteToUpdateXml(boolean writeToUpdateXml) {
+        this.writeToUpdateXml = writeToUpdateXml;
     }
 
     public String getHost() {
@@ -115,5 +118,13 @@ public class UploadPluginExtension {
 
     public void setUntilBuild(String untilBuild) {
         this.untilBuild = untilBuild;
+    }
+
+    public String getUpdateFile() {
+        return updateFile;
+    }
+
+    public void setUpdateFile(String updateFile) {
+        this.updateFile = updateFile;
     }
 }
