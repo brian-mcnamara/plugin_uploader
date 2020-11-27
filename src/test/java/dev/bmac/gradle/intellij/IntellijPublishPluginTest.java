@@ -33,14 +33,14 @@ public class IntellijPublishPluginTest {
     private static final String VERSION = "1.0";
 
     private MockWebServer webServer;
-    private IntellijPublishPlugin plugin;
-    private UploadPluginExtension extension;
-    private Marshaller marshaller;
+    private final IntellijPublishPlugin plugin;
+    private final UploadPluginExtension extension;
+    private final Marshaller marshaller;
     private final File testFile;
     private final Logger logger;
 
     public IntellijPublishPluginTest() throws Exception {
-        plugin = new IntellijPublishPlugin() {
+        plugin = new IntellijPublishPlugin(1, 2) {
             @Override
             protected String getLockId() {
                 return LOCK_ID;
@@ -140,12 +140,14 @@ public class IntellijPublishPluginTest {
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
         webServer.enqueue(new MockResponse().setResponseCode(201));
+        //Check for lock second retry
+        webServer.enqueue(new MockResponse().setResponseCode(201));
 
         try {
             plugin.execute(extension, logger);
             fail("Expected the plugin to fail because lock already exists");
         } catch (GradleException e) {
-            assertTrue(e.getMessage().contains("lock"));
+            assertTrue(e.getCause().getMessage().contains("lock"));
         }
     }
 
@@ -159,12 +161,14 @@ public class IntellijPublishPluginTest {
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //return changed lock
         webServer.enqueue(new MockResponse().setResponseCode(201).setBody("DifferentLock"));
+        //Check for lock second retry
+        webServer.enqueue(new MockResponse().setResponseCode(201).setBody("DifferentLock"));
 
         try {
             plugin.execute(extension, logger);
             fail("Expected the plugin to fail because lock already exists");
         } catch (GradleException e) {
-            assertTrue(e.getMessage().contains("claimed the lock"));
+            assertTrue(e.getCause().getMessage().contains("claimed the lock"));
         }
     }
 

@@ -1,5 +1,6 @@
 package dev.bmac.gradle.intellij;
 
+import com.github.rholder.retry.*;
 import com.sun.istack.Nullable;
 import okhttp3.*;
 import org.gradle.api.GradleException;
@@ -14,8 +15,12 @@ import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Simple gradle plugin to manage IntelliJ upload to a private repository as well as managing
@@ -28,8 +33,16 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
     private final Marshaller marshaller;
     private final Unmarshaller unmarshaller;
+    private final int timeoutMs;
+    private final int retryTimes;
 
     public IntellijPublishPlugin() throws Exception {
+        this(1000, 5);
+    }
+
+    IntellijPublishPlugin(int timeoutMs, int retryTimes) throws Exception {
+        this.timeoutMs = timeoutMs;
+        this.retryTimes = retryTimes;
         JAXBContext contextObj = JAXBContext.newInstance(PluginUpdates.class);
 
         marshaller = contextObj.createMarshaller();
@@ -60,32 +73,68 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
         postPlugin(extension, logger);
         if (extension.writeToUpdateXml()) {
-            String lock = null;
+            final AtomicReference<Throwable> firstException = new AtomicReference<>();
+            Retryer<Void> retryer = RetryerBuilder.<Void>newBuilder()
+                    .retryIfException()
+                    .withStopStrategy(StopStrategies.stopAfterAttempt(retryTimes))
+                    .withWaitStrategy(WaitStrategies.fixedWait(timeoutMs, TimeUnit.MILLISECONDS))
+                    .withRetryListener(new RetryListener() {
+                        @Override
+                        public <V> void onRetry(Attempt<V> attempt) {
+                            firstException.compareAndSet(null, attempt.getExceptionCause();
+                        }
+                    })
+                    .build();
             try {
-                lock = getLock(extension);
-                if (lock != null) {
-                    lock = null;
-                    throw new GradleException("Lock exists on host. Can not proceed until lock file is cleared." +
-                            " This could be another process currently running.");
-                }
-                lock = getLockId();
-                setLock(extension, lock);
-                //TODO better lock safety
-                if (!lock.equals(getLock(extension))) {
-                    lock = null;
-                    throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
-                }
-                PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
-                PluginUpdates updates = getUpdates(extension, logger);
-                updates.updateOrAdd(plugin);
-                postUpdates(extension, updates);
-            } finally {
-                if (lock != null) {
-                    if (lock.equals(getLock(extension))) {
-                        clearLock(extension);
-                    } else {
-                        logger.error("The lock value changed during execution. This is bad! " + extension.getUpdateFile() + " may be invalid");
+                retryer.call(() -> {
+                    postUpdateXml(extension, logger);
+                    return null;
+                });
+            } catch (ExecutionException | RetryException e) {
+                Throwable cause = firstException.get();
+                throw new GradleException("Failed to update " + extension.getUpdateFile(), cause != null ? cause : e);
+            }
+        }
+    }
+
+    void postUpdateXml(UploadPluginExtension extension, Logger logger) {
+        String lock = null;
+        try {
+            lock = getLock(extension);
+            if (lock != null) {
+                lock = null;
+                throw new GradleException("Lock exists on host. Can not proceed until lock file is cleared." +
+                        " This could be another process currently running.");
+            }
+            lock = getLockId();
+            setLock(extension, lock, logger);
+            //TODO better lock safety
+            if (!lock.equals(getLock(extension))) {
+                lock = null;
+                throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
+            }
+            PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
+            PluginUpdates updates = getUpdates(extension, logger);
+            updates.updateOrAdd(plugin);
+            postUpdates(extension, updates);
+        } finally {
+            if (lock != null) {
+                if (lock.equals(getLock(extension))) {
+                    Retryer<Object> retryer = RetryerBuilder.newBuilder()
+                            .retryIfExceptionOfType(IOException.class)
+                            .withStopStrategy(StopStrategies.stopAfterAttempt(retryTimes))
+                            .withWaitStrategy(WaitStrategies.fixedWait(timeoutMs, TimeUnit.MILLISECONDS))
+                            .build();
+                    try {
+                        retryer.call(() -> {
+                            clearLock(extension);
+                            return null;
+                        });
+                    } catch (ExecutionException | RetryException e) {
+                        logger.error("Failed to cleanup " + extension.getUpdateFile() + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
                     }
+                } else {
+                    logger.error("The lock value changed during execution. This is bad! " + extension.getUpdateFile() + " may be invalid");
                 }
             }
         }
@@ -203,7 +252,12 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         }
     }
 
-    void setLock(UploadPluginExtension extension, String lockValue) {
+    /**
+     * Upload the lock to the server.
+     * Note: This does not thow exceptions. It is expected to check the lock after this method is called to verify this
+     * process acquired the lock.
+     */
+    void setLock(UploadPluginExtension extension, String lockValue, Logger logger) {
         try {
             RequestBody requestBody = RequestBody.create(lockValue, MediaType.parse("text/plain"));
 
@@ -218,15 +272,15 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
             try (Response response = CLIENT.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to upload lock with status: " + response.code());
+                    throw new IOException("Failed to upload lock with status: " + response.code());
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            logger.error("Failed to post lock file which will cause this process to fail when we read back the lock", e);
         }
     }
 
-    void clearLock(UploadPluginExtension extension) {
+    void clearLock(UploadPluginExtension extension) throws IOException {
         try {
             Request.Builder requestBuilder = new Request.Builder()
                     .url(URI.create(extension.getHost() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION).normalize().toURL())
@@ -239,11 +293,11 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
             try (Response response = CLIENT.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to delete lock with status: " + response.code());
+                    throw new IOException("Failed to delete lock with status: " + response.code());
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("Failed to parse the host", e);
         }
     }
 
