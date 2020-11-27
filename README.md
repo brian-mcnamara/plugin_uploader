@@ -42,7 +42,7 @@ uploadPlugin {
 | <kbd>changeNotes</kbd> - Plugins change notes to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String|
 | <kbd>authentication</kbd> - Authentication string used to publish files to the private repo. Will be used as the authorization header | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** <ul> <li> `Basic [authenticationString]` </li> <li> `Bearer [bearerToken] ` </li> </ul>
 | <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String |
-| <kbd>writeToUpdateXml</kbd> - Gates whether updatePlugins.xml is updated. | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false` |
+| <kbd>updatePluginXml</kbd> - Gates whether updatePlugins.xml is updated. | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false` |
 
 ## Notes
 

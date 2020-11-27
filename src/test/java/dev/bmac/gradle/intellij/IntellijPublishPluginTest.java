@@ -7,7 +7,6 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
-import org.gradle.internal.logging.slf4j.OutputEventListenerBackedLogger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -182,7 +181,7 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testOnlyPluginUploadIfWriteToUpdateXmlFalse() throws Exception {
-        extension.setWriteToUpdateXml(false);
+        extension.setUpdatePluginXml(false);
         //Upload file
         webServer.enqueue(new MockResponse().setResponseCode(201));
 

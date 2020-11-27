@@ -26,7 +26,7 @@ public class UploadPluginExtension {
     //Change notes to be added (optional)
     private String changeNotes;
     //Whether to update {@link updateFile}
-    private boolean writeToUpdateXml = true;
+    private boolean updatePluginXml = true;
     //Since idea build to prevent installs with earlier versions (optional)
     private String sinceBuild;
     //Until build to also prevent installs with newer versions (optional)
@@ -65,11 +65,11 @@ public class UploadPluginExtension {
     }
 
     public boolean writeToUpdateXml() {
-        return writeToUpdateXml;
+        return updatePluginXml;
     }
 
-    public void setWriteToUpdateXml(boolean writeToUpdateXml) {
-        this.writeToUpdateXml = writeToUpdateXml;
+    public void setUpdatePluginXml(boolean updatePluginXml) {
+        this.updatePluginXml = updatePluginXml;
     }
 
     public String getHost() {
