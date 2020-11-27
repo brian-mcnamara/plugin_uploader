@@ -66,7 +66,7 @@ public class IntellijPublishPluginTest {
     public void setup() throws Exception {
         webServer = new MockWebServer();
         webServer.start();
-        extension.setHost(webServer.url("/").toString());
+        extension.setUrl(webServer.url("/").toString());
         extension.setFile(testFile);
         extension.setPluginId(PLUGIN_ID);
         extension.setPluginName(PLUGIN_NAME);
@@ -220,8 +220,8 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testHostWithoutTrailingSlash() throws Exception {
-        String host = extension.getHost() + "somePath";
-        extension.setHost(host);
+        String host = extension.getUrl() + "/somePath";
+        extension.setUrl(host);
 
         enqueueResponses();
 

@@ -8,6 +8,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 
+import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -16,7 +17,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +36,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     private final int timeoutMs;
     private final int retryTimes;
 
+    @Inject
     public IntellijPublishPlugin() throws Exception {
         this(1000, 5);
     }
@@ -63,7 +64,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     }
 
     void execute(UploadPluginExtension extension, Logger logger) {
-        if (extension.getHost() == null || extension.getPluginName() == null ||
+        if (extension.getUrl() == null || extension.getPluginName() == null ||
                 extension.getFile() == null || extension.getPluginId() == null || extension.getVersion() == null) {
             throw new RuntimeException("Must specify host, pluginName, pluginId, version and file to uploadPlugin");
         }
@@ -149,7 +150,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
         try {
             Request.Builder requestBuilder = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + pluginEndpoint).normalize().toURL())
+                    .url(extension.getUrl() + "/" + pluginEndpoint)
                     .post(requestBody);
 
             if (extension.getAuthentication() != null) {
@@ -181,7 +182,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
             RequestBody requestBody = RequestBody.create(file, MediaType.parse("application/xml"));
 
             Request.Builder requestBuilder = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + fileName).normalize().toURL())
+                    .url(extension.getUrl() + "/" + fileName)
                     .post(requestBody);
 
             if (extension.getAuthentication() != null) {
@@ -203,7 +204,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         String updateFile = extension.getUpdateFile();
         try {
             Request request = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + updateFile).normalize().toURL())
+                    .url(extension.getUrl() + "/" + updateFile)
                     .get()
                     .build();
 
@@ -231,7 +232,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     String getLock(UploadPluginExtension extension) {
         try {
             Request request = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION).normalize().toURL())
+                    .url(extension.getUrl() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION)
                     .get()
                     .build();
 
@@ -264,7 +265,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
             RequestBody requestBody = RequestBody.create(lockValue, MediaType.parse("text/plain"));
 
             Request.Builder requestBuilder = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION).normalize().toURL())
+                    .url(extension.getUrl() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION)
                     .post(requestBody);
 
             if (extension.getAuthentication() != null) {
@@ -285,7 +286,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     void clearLock(UploadPluginExtension extension) throws IOException {
         try {
             Request.Builder requestBuilder = new Request.Builder()
-                    .url(URI.create(extension.getHost() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION).normalize().toURL())
+                    .url(extension.getUrl() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION)
                     .delete();
 
             if (extension.getAuthentication() != null) {

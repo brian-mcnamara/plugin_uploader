@@ -7,8 +7,8 @@ import java.io.File;
  **/
 public class UploadPluginExtension {
     public static final String UPDATE_PLUGINS_FILENAME = "updatePlugins.xml";
-    //The host of the repository where updatePlugins.xml and the plugin zips will be placed
-    private String host;
+    //The url of the repository where updatePlugins.xml and the plugin zips will be placed
+    private String url;
     //The plugin name
     private String pluginName;
     //The plugin file to upload
@@ -72,12 +72,12 @@ public class UploadPluginExtension {
         this.updatePluginXml = updatePluginXml;
     }
 
-    public String getHost() {
-        return host;
+    public String getUrl() {
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    public void setHost(String host) {
-        this.host = host;
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public String getAuthentication() {
