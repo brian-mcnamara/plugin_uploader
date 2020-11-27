@@ -81,7 +81,9 @@ public class IntellijPublishPlugin implements Plugin<Project> {
                     .withRetryListener(new RetryListener() {
                         @Override
                         public <V> void onRetry(Attempt<V> attempt) {
-                            firstException.compareAndSet(null, attempt.getExceptionCause());
+                            if (attempt.hasException()) {
+                                firstException.compareAndSet(null, attempt.getExceptionCause());
+                            }
                         }
                     })
                     .build();
