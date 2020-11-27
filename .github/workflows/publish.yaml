@@ -1,0 +1,18 @@
+name: Publish package to the Gradle plugin repo
+on:
+  release:
+    types: [created]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Publish package
+        run: ./gradlew publishPlugins
+        env:
+          org.gradle.project.gradle.publish.key: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          org.gradle.project.gradle.publish.secret: ${{ secrets.GRADLE_PUBLISH_SECRET }}

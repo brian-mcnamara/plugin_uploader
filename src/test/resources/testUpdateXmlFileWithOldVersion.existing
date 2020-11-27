@@ -1,0 +1,11 @@
+<plugins>
+    <plugin id="pluginId" url="./MyPlugin/oldFile.zip" version="0.1">
+        <change-notes>someOtherNotes</change-notes>
+        <description>someOtherDescription</description>
+        <name>DifferentName</name>
+        <versionInfo since-build="0.1" until-build="0.2"/>
+    </plugin>
+    <plugin id="other.plugin" url="./otherPlugin/oldFile.zip" version="1.2.3">
+        <name>DifferentName</name>
+    </plugin>
+</plugins>
