@@ -66,7 +66,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     void execute(UploadPluginExtension extension, Logger logger) {
         if (extension.getUrl() == null || extension.getPluginName() == null ||
                 extension.getFile() == null || extension.getPluginId() == null || extension.getVersion() == null) {
-            throw new RuntimeException("Must specify host, pluginName, pluginId, version and file to uploadPlugin");
+            throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
         }
         if (extension.writeToUpdateXml() && extension.getUpdateFile() == null) {
             throw new RuntimeException("updateFile can not be null");

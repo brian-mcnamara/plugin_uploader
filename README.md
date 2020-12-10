@@ -16,8 +16,14 @@ plugins {
 }
 
 uploadPlugin {
-    //Get the plugin distribution from the buildPlugin
+    // Get the plugin distribution file from the buildPlugin task provided from the gradle-intellij-plugin
     def archive = project.tasks.buildPlugin as Zip
+    // For security, do not hard code usernames or passwords in source control, instead load them through the gradle properties:
+    // <code> findProperty('some.gradle.property') as String </code>
+    // or through Environment variables:
+    // <code> System.getenv('SOME_ENVIRONMENT_VARIABLE') </code>
+    def username = "exampleUsername" 
+    def password = "examplePassword"
     url 'https://repo.example.com/intellij/plugins/'
     pluginName 'PluginName'
     file archive.archivePath
@@ -25,7 +31,8 @@ uploadPlugin {
     version project.version
     description file('description.txt').text
     changeNotes file('change-notes.txt').text
-    authentication 'Basic ' + new String(Base64.encoder.encode((username + ":" + password).bytes))
+    // Example for Basic type authentication
+    authentication 'Basic ' + new String(Base64.encoder.encode(("$username:$password").bytes))
 }
 ```
 
@@ -41,7 +48,7 @@ uploadPlugin {
 | <kbd>description</kbd> - Plugins description to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String| 
 | <kbd>changeNotes</kbd> - Plugins change notes to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String|
 | <kbd>authentication</kbd> - Authentication string used to publish files to the private repo. Will be used as the authorization header | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** <ul> <li> `Basic [authenticationString]` </li> <li> `Bearer [bearerToken] ` </li> </ul>
-| <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String |
+| <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. <br/><br/><b>Note:</b> See [Publishing a Plugin to a Custom Plugin Repository](https://jetbrains.org/intellij/sdk/docs/basics/getting_started/update_plugins_format.html#describing-your-plugins-in-updatepluginsxml-file) for more information about updatePlugins.xml | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String |
 | <kbd>updatePluginXml</kbd> - Gates whether updatePlugins.xml is updated. | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false` |
 
 ## Notes
