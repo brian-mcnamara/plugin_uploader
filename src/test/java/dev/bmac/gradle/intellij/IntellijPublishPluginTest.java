@@ -313,6 +313,40 @@ public class IntellijPublishPluginTest {
         assertEquals(expectedFile, updatePlugin);
     }
 
+    @Test
+    public void testUploadWithPutMethod() throws Exception {
+        extension.setUploadMethod(UploadPluginExtension.UploadMethod.PUT);
+
+        enqueueResponses();
+
+        plugin.execute(extension, logger);
+
+        //Put file
+        RecordedRequest recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
+        //check lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //set lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
+        //check lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //check update xml
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //Put update xml
+        recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
+        //get lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //Delete lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("DELETE", recordedRequest.getMethod());
+    }
+
     private void enqueueResponses() {
         enqueueResponses(null);
     }

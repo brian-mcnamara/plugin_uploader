@@ -1,5 +1,7 @@
 package dev.bmac.gradle.intellij;
 
+import okhttp3.internal.http.HttpMethod;
+
 import java.io.File;
 
 /**
@@ -31,6 +33,8 @@ public class UploadPluginExtension {
     private String sinceBuild;
     //Until build to also prevent installs with newer versions (optional)
     private String untilBuild;
+    //HTTP method used for uploading files
+    private UploadMethod uploadMethod = UploadMethod.POST;
 
     public String getDescription() {
         return description;
@@ -126,5 +130,18 @@ public class UploadPluginExtension {
 
     public void setUpdateFile(String updateFile) {
         this.updateFile = updateFile;
+    }
+
+    public String getUploadMethod() {
+        return uploadMethod.toString();
+    }
+
+    public void setUploadMethod(UploadMethod uploadMethod) {
+        this.uploadMethod = uploadMethod;
+    }
+
+    public enum UploadMethod {
+        POST,
+        PUT;
     }
 }
