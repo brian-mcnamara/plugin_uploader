@@ -151,7 +151,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         try {
             Request.Builder requestBuilder = new Request.Builder()
                     .url(extension.getUrl() + "/" + pluginEndpoint)
-                    .post(requestBody);
+                    .method(extension.getUploadMethod(), requestBody);
 
             if (extension.getAuthentication() != null) {
                 requestBuilder.addHeader("Authorization", extension.getAuthentication());
@@ -183,7 +183,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
             Request.Builder requestBuilder = new Request.Builder()
                     .url(extension.getUrl() + "/" + fileName)
-                    .post(requestBody);
+                    .method(extension.getUploadMethod(), requestBody);
 
             if (extension.getAuthentication() != null) {
                 requestBuilder.addHeader("Authorization", extension.getAuthentication());
@@ -266,7 +266,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
             Request.Builder requestBuilder = new Request.Builder()
                     .url(extension.getUrl() + "/" + extension.getUpdateFile() + LOCK_FILE_EXTENSION)
-                    .post(requestBody);
+                    .method(extension.getUploadMethod(), requestBody);
 
             if (extension.getAuthentication() != null) {
                 requestBuilder.addHeader("Authorization", extension.getAuthentication());
@@ -279,7 +279,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
                 }
             }
         } catch (IOException e) {
-            logger.error("Failed to post lock file which will cause this process to fail when we read back the lock", e);
+            logger.error("Failed to upload lock file which will cause this process to fail when we read back the lock", e);
         }
     }
 

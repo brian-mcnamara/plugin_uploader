@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.1.0"
+    id "dev.bmac.intellij.plugin-uploader" version "1.1.1"
 }
 
 uploadPlugin {
@@ -40,7 +40,7 @@ uploadPlugin {
 
 | Attributes | Values | 
 | :------------- | :--------- |
-| <kbd>url</kbd> - The url plus path of the repository to post the plugin to | **Required:** true <br/> **Acceptable Values:** <ul> <li>`https://repo.example.com/intellij/plugins` </li> <li>`http://repo.example.com:4443`</li></ul> |
+| <kbd>url</kbd> - The url plus path of the repository to post the plugin to | **Required:** true <br/> **Acceptable Values:** Any URL, for example: <ul> <li>`https://repo.example.com/intellij/plugins` </li> <li>`http://repo.example.com:4443`</li></ul> |
 | <kbd>pluginName</kbd> - The plugin name to be used in the upload path such that url + pluginName is the folder the plugin will be uploaded to <br/><br/>**Note:** Name will be escaped when used as the upload path | **Required:** true <br/> **Acceptable Values:** Any String|
 | <kbd>file</kbd> - The file to be uploaded to the repo under url + pluginName + file.getName() |  **Required:** true <br/> **Acceptable Values:** A existing file path, ideally should be set via `project.tasks.buildPlugin as Zip` which grabs the file from the IntelliJ gradle plugin |
 | <kbd>pluginId</kbd> - Plugin Id used to match in the updatePlugins.xml | **Required:** true <br/> **Acceptable Values:** Any String|
@@ -50,6 +50,7 @@ uploadPlugin {
 | <kbd>authentication</kbd> - Authentication string used to publish files to the private repo. Will be used as the authorization header | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** <ul> <li> `Basic [authenticationString]` </li> <li> `Bearer [bearerToken] ` </li> </ul>
 | <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. <br/><br/><b>Note:</b> See [Publishing a Plugin to a Custom Plugin Repository](https://jetbrains.org/intellij/sdk/docs/basics/getting_started/update_plugins_format.html#describing-your-plugins-in-updatepluginsxml-file) for more information about updatePlugins.xml | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String |
 | <kbd>updatePluginXml</kbd> - Gates whether updatePlugins.xml is updated. | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false` |
+| <kbd>uploadMethod</kbd> - Sets the HTTP method used for uploading files to the repo. | **Required:** false <br/> **Default:** <kbd>POST</kbd> <br/> **Acceptable Values:** <ul> <li>POST</li><li>PUT</li></ul> |
 
 ## Notes
 
