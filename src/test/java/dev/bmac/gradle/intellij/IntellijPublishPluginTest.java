@@ -1,6 +1,8 @@
 package dev.bmac.gradle.intellij;
 
 import com.google.common.io.Resources;
+import dev.bmac.gradle.intellij.xml.PluginElement;
+import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -48,7 +50,7 @@ public class IntellijPublishPluginTest {
         logger = Logging.getLogger(IntellijPublishPluginTest.class);
         extension = new UploadPluginExtension();
 
-        JAXBContext contextObj = JAXBContext.newInstance(PluginUpdates.class);
+        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
         marshaller = contextObj.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -80,14 +82,14 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testPluginEndToEnd() throws Exception {
-        PluginUpdates.Plugin pluginInstance = new PluginUpdates.Plugin(extension);
-        PluginUpdates updates = new PluginUpdates();
-        updates.updateOrAdd(pluginInstance);
+        PluginElement pluginInstance = new PluginElement(extension);
+        PluginsElement updates = new PluginsElement();
+        updates.getPlugins().add(pluginInstance);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         OutputStreamWriter writer = new OutputStreamWriter(baos);
         marshaller.marshal(updates, writer);
-        String updatePluginExpected = new String(baos.toByteArray());
+        String updatePluginExpected = baos.toString();
 
         enqueueResponses();
 
@@ -174,7 +176,7 @@ public class IntellijPublishPluginTest {
     @Test
     public void testPluginUpdateEncoding() {
         extension.setPluginName("plugin with space");
-        PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
+        PluginElement plugin = new PluginElement(extension);
 
         assertEquals("./plugin%20with%20space/" + testFile.getName(), plugin.getUrl());
     }

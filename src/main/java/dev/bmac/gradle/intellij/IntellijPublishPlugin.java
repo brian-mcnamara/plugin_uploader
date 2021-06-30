@@ -2,6 +2,8 @@ package dev.bmac.gradle.intellij;
 
 import com.github.rholder.retry.*;
 import com.sun.istack.Nullable;
+import dev.bmac.gradle.intellij.xml.PluginElement;
+import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.*;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -44,7 +46,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     IntellijPublishPlugin(int timeoutMs, int retryTimes) throws Exception {
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
-        JAXBContext contextObj = JAXBContext.newInstance(PluginUpdates.class);
+        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
         marshaller = contextObj.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -116,9 +118,9 @@ public class IntellijPublishPlugin implements Plugin<Project> {
                 lock = null;
                 throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
             }
-            PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
-            PluginUpdates updates = getUpdates(extension, logger);
-            updates.updateOrAdd(plugin);
+            PluginElement plugin = new PluginElement(extension);
+            PluginsElement updates = getUpdates(extension, logger);
+            PluginUpdatesUtil.updateOrAdd(plugin, updates.getPlugins(), logger);
             postUpdates(extension, updates);
         } finally {
             if (lock != null) {
@@ -168,7 +170,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         }
     }
 
-    void postUpdates(UploadPluginExtension extension, PluginUpdates updates) {
+    void postUpdates(UploadPluginExtension extension, PluginsElement updates) {
         try {
             File file = File.createTempFile("updatePlugins", null);
             file.deleteOnExit();
@@ -200,7 +202,7 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         }
     }
 
-    PluginUpdates getUpdates(UploadPluginExtension extension, Logger logger) {
+    PluginsElement getUpdates(UploadPluginExtension extension, Logger logger) {
         String updateFile = extension.getUpdateFile();
         try {
             Request request = new Request.Builder()
@@ -211,13 +213,13 @@ public class IntellijPublishPlugin implements Plugin<Project> {
             try (Response response = CLIENT.newCall(request).execute()) {
                 if (response.code() == 404) {
                     logger.info("No " + updateFile + " found. Creating new file.");
-                    return new PluginUpdates();
+                    return new PluginsElement();
                 } else if (response.isSuccessful()) {
                     ResponseBody body = response.body();
                     if (body == null) {
                         throw new RuntimeException("Body was null for " + updateFile);
                     }
-                    return (PluginUpdates) unmarshaller.unmarshal(body.byteStream());
+                    return (PluginsElement) unmarshaller.unmarshal(body.byteStream());
                 } else {
                     throw new RuntimeException("Received an unknown status code while retrieving " + updateFile);
                 }
