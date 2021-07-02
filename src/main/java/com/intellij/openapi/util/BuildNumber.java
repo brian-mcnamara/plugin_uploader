@@ -1,4 +1,4 @@
-// Copyright 2000-2021 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the apache-license.txt file.
+// Copyright 2000-2021 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the jetbrains-license.txt file.
 package com.intellij.openapi.util;
 
 import org.jetbrains.annotations.NotNull;
@@ -7,7 +7,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 
 /**
- * copy from intellij-community BuildNumber class minus loading build info from the application and unused methods
+ * A copy of BuildNumber from intellij-community (https://github.com/JetBrains/intellij-community/blob/master/platform/core-api/src/com/intellij/openapi/util/BuildNumber.java)
+ * A bunch of methods have been removed as they were unused, some methods added to utility in this code base, and some
+ * methods have been modified to reduce complexity where unneeded.
  */
 public final class BuildNumber implements Comparable<BuildNumber> {
     private static final String STAR = "*";
@@ -163,22 +165,6 @@ public final class BuildNumber implements Comparable<BuildNumber> {
                 break;
             }
             componentsCopy[i] = SNAPSHOT_VALUE - 1;
-        }
-        return new BuildNumber(myProductCode, componentsCopy);
-    }
-
-    /**
-     * Added by Brian to get a future build number from this one.
-     */
-    public BuildNumber plusOne() {
-        int[] componentsCopy;
-        componentsCopy = Arrays.copyOf(myComponents, myComponents.length);
-        for (int i = componentsCopy.length - 1; i >= 0; i--) {
-            if (componentsCopy[i] < SNAPSHOT_VALUE - 1) {
-                componentsCopy[i]++;
-                break;
-            }
-            componentsCopy[i] = 1;
         }
         return new BuildNumber(myProductCode, componentsCopy);
     }

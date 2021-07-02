@@ -60,3 +60,8 @@ This plugin uses a lock file to prevent concurrent modifications to the updatePl
 While the lock file will be cleaned up, it could be left behind if the process is forcefully interrupted
 requiring the lock to be deleted manually. The lock can be found in the <kbd>url</kbd> root and is named `updatePlugins.xml.lock`
 (lock file name depends on <kbd>updateFile</kbd>)
+
+## License
+
+Most of this project is covered by MIT license - located in the LICENSE file, with certain portions covered by 
+Apache 2 license all of which clearly marked as such in a comment at the top of the file(s).
