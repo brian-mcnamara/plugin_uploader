@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'dev.bmac.intellij.plugins'
-version '1.1.1'
+version '1.2.0'
 
 sourceCompatibility = 1.8
 
@@ -16,12 +16,12 @@ repositories {
 
 dependencies {
     compile gradleApi()
-    compile "com.squareup.okhttp3:okhttp:4.2.2"
+    compile "com.squareup.okhttp3:okhttp:4.9.1"
     compile "javax.xml.bind:jaxb-api:2.3.1"
     compile "com.sun.xml.bind:jaxb-impl:2.3.3-b02"
-    compile "com.google.guava:guava:28.2-jre"
+    compile "com.google.guava:guava:30.1.1-jre"
     compile "com.github.rholder:guava-retrying:2.0.0"
-    testCompile "com.squareup.okhttp3:mockwebserver:4.3.1"
+    testCompile "com.squareup.okhttp3:mockwebserver:4.9.1"
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile group: 'org.mockito', name: 'mockito-core', version: '3.11.1'
 }
