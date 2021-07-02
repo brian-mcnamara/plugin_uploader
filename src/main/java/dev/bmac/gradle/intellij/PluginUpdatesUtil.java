@@ -36,17 +36,18 @@ public class PluginUpdatesUtil {
     public static void updateOrAdd(PluginElement plugin, List<PluginElement> plugins, Logger logger) {
         List<Integer> existingEntries = getExistingEntries(plugin, plugins);
         boolean useMultiVersion = true;
+        boolean addEntry = true;
         if (existingEntries.size() > 1) {
             if (plugin.getVersionInfo() != null && plugin.getVersionInfo().getSinceBuild() != null) {
                 if (versionDoesNotAllowMultiVersion(plugin.getVersionInfo().getSinceBuild())) {
-                    logger.warn("Notice: Multiple plugin versions are being used in updatePlugins.xml which requires IDEA version "
-                            + MIN_VERSION.asString() + " which is greater then this plugins since-build." +
+                    logger.warn("Notice: Multi-versioning is being used for this plugin on the repository which requires IDEA version "
+                            + MIN_VERSION.asString() + ". However plugins since-build is below that." +
                             " Users on earlier versions may experience issues when using this repository. One fix is to update" +
                             " the plugins since-build to be " + MIN_VERSION.asString() + " or greater.");
                 }
             } else {
                 logger.error("The repository contains multi-version entries for this plugin which requires all uploads to set a since-build. " +
-                        "Please add a since-build to this upload and try again.");
+                        "Please specify a valid sinceBuild and try again.");
                 return;
             }
         } else {
@@ -55,9 +56,10 @@ public class PluginUpdatesUtil {
                 useMultiVersion = false;
             } else if (existingEntries.size() == 1) {
                 PluginElement existingPlugin = plugins.get(existingEntries.get(0));
-                //If no since-build is set on existing entry, we will allow multi-version, however if the prior entry has
-                //a since-version before MIN_VERSION, we will override it and multi-version can kick in next time.
-                if (existingPlugin.getVersionInfo() != null && versionDoesNotAllowMultiVersion(existingPlugin.getVersionInfo().getSinceBuild())) {
+                // If no since-build is set on existing entry, or a since-version is before MIN_VERSION,
+                // we will override it and multi-version can kick in next time.
+                if (existingPlugin.getVersionInfo() != null &&
+                        versionDoesNotAllowMultiVersion(existingPlugin.getVersionInfo().getSinceBuild())) {
                     useMultiVersion = false;
                 }
             }
@@ -79,7 +81,8 @@ public class PluginUpdatesUtil {
                                 existingPlugin.getVersionInfo().getSinceBuild().compareTo(plugin.getVersionInfo().getSinceBuild()) == 0)) {
                     logger.debug("Updating existing plugin entry as since-build version either does not exist or is identical.");
                     plugins.set(existingPosition, plugin);
-                    return;
+                    addEntry = false;
+                    continue;
                 } else if (existingPlugin.getVersionInfo() == null) {
                     BuildNumber currentMinusOne = plugin.getVersionInfo().getSinceBuild().minusOne();
                     logger.info("Adding idea-version with until-build set to " + currentMinusOne.asString() + " to existing plugin entry on the repository");
@@ -123,7 +126,7 @@ public class PluginUpdatesUtil {
                 BuildNumber after = buildNumbers.get(position + 1);
                 PluginElement afterPlugin = buildNumberMap.get(after);
                 if (plugin.getVersionInfo().getUntilBuild() == null ||
-                        plugin.getVersionInfo().getUntilBuild().compareTo(after) <= 0) {
+                        plugin.getVersionInfo().getUntilBuild().compareTo(after) >= 0) {
                     BuildNumber afterPrior = after.minusOne();
                     logger.info("Updating current plugin entries until-build to " + afterPrior.asString()  +
                             " as entry with version " + afterPlugin.getVersion() + " has a later since-build");
@@ -131,7 +134,9 @@ public class PluginUpdatesUtil {
                 }
             }
         }
-        plugins.add(plugin);
+        if (addEntry) {
+            plugins.add(plugin);
+        }
     }
 
     private static List<Integer> getExistingEntries(PluginElement pluginElement, List<PluginElement> plugins) {

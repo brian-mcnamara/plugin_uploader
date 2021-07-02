@@ -4,11 +4,11 @@ import dev.bmac.gradle.intellij.xml.IdeaVersionElement;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.gradle.api.logging.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class PluginUpdatesUtilTest {
 
@@ -17,15 +17,16 @@ public class PluginUpdatesUtilTest {
     private static final String TEST_IDEA_VERSION = "201.3210.11";
 
     private Logger logger = mock(Logger.class);
+    private PluginsElement pluginsElement;
+
+    @Before
+    public void init() {
+        pluginsElement = new PluginsElement();
+    }
 
     @Test
     public void testWithNoExistingPlugins() {
-        PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
-        plugin.setVersion(TEST_VERSION);
-        plugin.setVersionInfo(new IdeaVersionElement(TEST_IDEA_VERSION, null));
-        PluginsElement pluginsElement = new PluginsElement();
-        PluginUpdatesUtil.updateOrAdd(plugin, pluginsElement.getPlugins(), logger);
+        addPluginToList(TEST_VERSION, TEST_IDEA_VERSION, null);
 
         assertEquals(1, pluginsElement.getPlugins().size());
         PluginElement stored = pluginsElement.getPlugins().get(0);
@@ -35,20 +36,10 @@ public class PluginUpdatesUtilTest {
 
     @Test
     public void testPluginWithMultipleIdeaVersions() {
-        PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
-        plugin.setVersion(TEST_VERSION);
-        plugin.setVersionInfo(new IdeaVersionElement(TEST_IDEA_VERSION, null));
-        PluginsElement pluginsElement = new PluginsElement();
-        pluginsElement.getPlugins().add(plugin);
+        addPluginToList(TEST_VERSION, TEST_IDEA_VERSION, null);
 
+        addPluginToList("1.0.1", "211.3210.12", null);
 
-        PluginElement pluginV2 = new PluginElement();
-        pluginV2.setId(TEST_ID);
-        pluginV2.setVersion("1.0.1");
-        pluginV2.setVersionInfo(new IdeaVersionElement("211.3210.12", null));
-
-        PluginUpdatesUtil.updateOrAdd(pluginV2, pluginsElement.getPlugins(), logger);
         assertEquals(2, pluginsElement.getPlugins().size());
 
         assertEquals("211.3210.11", getPluginVersion(TEST_VERSION, pluginsElement).getVersionInfo().getUntilBuildString());
@@ -56,26 +47,12 @@ public class PluginUpdatesUtilTest {
 
     @Test
     public void testPluginWithIdeaVersionInBetweenExistingVersions() {
-        PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
-        plugin.setVersion(TEST_VERSION);
-        plugin.setVersionInfo(new IdeaVersionElement("201.3210.10", "202.3210.10"));
-        PluginsElement pluginsElement = new PluginsElement();
-        pluginsElement.getPlugins().add(plugin);
+        addPluginToList(TEST_VERSION, "201.3210.10", "202.3210.10");
 
-        PluginElement plugin2 = new PluginElement();
-        plugin2.setId(TEST_ID);
-        plugin2.setVersion("1.1.0");
-        plugin2.setVersionInfo(new IdeaVersionElement("202.3210.11", null));
-        PluginUpdatesUtil.updateOrAdd(plugin2, pluginsElement.getPlugins(), logger);
+        addPluginToList("1.1.0", "202.3210.11", null);
 
+        addPluginToList("1.0.1", "202.123.1", null);
 
-        PluginElement plugin3 = new PluginElement();
-        plugin3.setId(TEST_ID);
-        plugin3.setVersion("1.0.1");
-        plugin3.setVersionInfo(new IdeaVersionElement("202.123.1", null));
-
-        PluginUpdatesUtil.updateOrAdd(plugin3, pluginsElement.getPlugins(), logger);
         assertEquals(3, pluginsElement.getPlugins().size());
 
         assertEquals("202.3210.10", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
@@ -90,28 +67,13 @@ public class PluginUpdatesUtilTest {
 
     @Test
     public void testPluginVersionChangeWithSameSinceBuild() {
-        PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
-        plugin.setVersion(TEST_VERSION);
-        plugin.setVersionInfo(new IdeaVersionElement("201.3210.10", "202.3210.10"));
-        PluginsElement pluginsElement = new PluginsElement();
-        pluginsElement.getPlugins().add(plugin);
+        addPluginToList(TEST_VERSION, "201.3210.10", "202.3210.10");
 
-        PluginElement plugin2 = new PluginElement();
-        plugin2.setId(TEST_ID);
-        plugin2.setVersion("1.0.1");
-        plugin2.setVersionInfo(new IdeaVersionElement("201.3210.10", "202.3210.10"));
-
-        PluginUpdatesUtil.updateOrAdd(plugin2, pluginsElement.getPlugins(), logger);
+        addPluginToList("1.0.1", "201.3210.10", "202.3210.10");
 
         assertEquals(1, pluginsElement.getPlugins().size());
 
-        PluginElement plugin3 = new PluginElement();
-        plugin3.setId(TEST_ID);
-        plugin3.setVersion("1.0.2");
-        plugin3.setVersionInfo(new IdeaVersionElement("201.3210.10", "212.3210.10"));
-
-        PluginUpdatesUtil.updateOrAdd(plugin3, pluginsElement.getPlugins(), logger);
+        addPluginToList("1.0.2", "201.3210.10", "212.3210.10");
 
         assertEquals(1, pluginsElement.getPlugins().size());
         assertEquals("212.3210.10", getPluginVersion("1.0.2", pluginsElement).getVersionInfo().getUntilBuildString());
@@ -119,28 +81,13 @@ public class PluginUpdatesUtilTest {
 
     @Test
     public void testPluginVersionChangeWithDifferentSinceNullUntil() {
-        PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
-        plugin.setVersion(TEST_VERSION);
-        plugin.setVersionInfo(new IdeaVersionElement("201.3210", null));
-        PluginsElement pluginsElement = new PluginsElement();
-        pluginsElement.getPlugins().add(plugin);
+        addPluginToList(TEST_VERSION, "201.3210", null);
 
-        PluginElement plugin2 = new PluginElement();
-        plugin2.setId(TEST_ID);
-        plugin2.setVersion("1.0.1");
-        plugin2.setVersionInfo(new IdeaVersionElement("202", null));
-
-        PluginUpdatesUtil.updateOrAdd(plugin2, pluginsElement.getPlugins(), logger);
+        addPluginToList("1.0.1", "202", null);
 
         assertEquals(2, pluginsElement.getPlugins().size());
 
-        PluginElement plugin3 = new PluginElement();
-        plugin3.setId(TEST_ID);
-        plugin3.setVersion("1.0.2");
-        plugin3.setVersionInfo(new IdeaVersionElement("202.1000", null));
-
-        PluginUpdatesUtil.updateOrAdd(plugin3, pluginsElement.getPlugins(), logger);
+        addPluginToList("1.0.2", "202.1000", null);
 
         assertEquals(3, pluginsElement.getPlugins().size());
         assertEquals("201.3210", getPluginVersion("1.0.0", pluginsElement).getVersionInfo().getSinceBuildString());
@@ -149,6 +96,141 @@ public class PluginUpdatesUtilTest {
         assertEquals("202.0", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getSinceBuildString());
         assertEquals("202.999", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
         assertNull(getPluginVersion("1.0.2", pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testPluginWithNullVersionFollowedBySetVersionUnderMin() {
+        addPluginToList(TEST_VERSION, null, null);
+
+        addPluginToList("1.0.1", "181.1", null);
+
+        assertEquals(1, pluginsElement.getPlugins().size());
+
+        assertEquals("181.1", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getSinceBuildString());
+        assertNull(getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testPluginWithNullVersionFollowedBySetVersionAboveMin() {
+        addPluginToList(TEST_VERSION, null, null);
+
+        addPluginToList("1.0.1", "200.1", null);
+
+        assertEquals(2, pluginsElement.getPlugins().size());
+
+        assertNull(getPluginVersion("1.0.0", pluginsElement).getVersionInfo().getSinceBuild());
+        assertEquals("200.0", getPluginVersion("1.0.0", pluginsElement).getVersionInfo().getUntilBuildString());
+        assertEquals("200.1", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getSinceBuildString());
+        assertNull(getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testNoPluginUploadedWhenMultiVersionExistAndSinceBuildNotSpecified() {
+        addPluginToList(TEST_VERSION, "201.1", "201.2");
+
+        addPluginToList("1.0.1", "201.3", null);
+
+        assertEquals(2, pluginsElement.getPlugins().size());
+
+        reset(logger);
+        addPluginToList("1.0.2", null, "211.1");
+        verify(logger).error(contains("specify a valid sinceBuild"));
+
+        assertEquals(2, pluginsElement.getPlugins().size());
+        assertNull(getPluginVersion("1.0.2", pluginsElement));
+    }
+
+    @Test
+    public void testWarningWhenMultiVersionExistAndSinceBuildBeforeMinVersion() {
+        addPluginToList(TEST_VERSION, "201.1", "201.2");
+
+        addPluginToList("1.0.1", "201.3", null);
+
+        assertEquals(2, pluginsElement.getPlugins().size());
+
+        reset(logger);
+        addPluginToList("1.0.2", "181.1", null);
+        verify(logger).warn(contains("However plugins since-build is below that"));
+
+        assertEquals(3, pluginsElement.getPlugins().size());
+        assertNotNull(getPluginVersion("1.0.2", pluginsElement));
+    }
+
+    @Test
+    public void testExistingEntryWithSinceBuildIsUpdatedOnNewEntryWithSinceLessThenUntil() {
+        addPluginToList(TEST_VERSION, "201.1", "201.3");
+
+        addPluginToList("1.0.1", "201.3", null);
+
+        assertEquals(2, pluginsElement.getPlugins().size());
+        assertEquals("201.2", getPluginVersion(TEST_VERSION, pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testExistingEntryWithSinceBuildIsNotUpdatedOnNewEntryWithSinceGreaterThenUntil() {
+        addPluginToList(TEST_VERSION, "201.1", "201.2");
+
+        addPluginToList("1.0.1", "201.3", null);
+
+        assertEquals("201.2", getPluginVersion(TEST_VERSION, pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testPluginUntilUpdatedWhenExistingEntryConflictsWithValue() {
+        addPluginToList(TEST_VERSION, "201.1", "201.3");
+
+        addPluginToList("1.1.0", "201.5", null);
+
+        addPluginToList("1.0.1", "201.4", "201.6");
+
+        assertEquals("201.4", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
+        assertNull(getPluginVersion("1.1.0", pluginsElement).getVersionInfo().getUntilBuild());
+    }
+
+    @Test
+    public void testPluginWithExistingSinceUpdatesUntil() {
+        addPluginToList(TEST_VERSION, "201.1", "201.2");
+
+        addPluginToList("1.1.0", "201.3", null);
+
+        addPluginToList("1.0.1", "201.1", "201.6");
+
+        assertEquals("201.2", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testExistingPluginWithNullSince() {
+        addPluginToList(TEST_VERSION, null, "202.1");
+
+        addPluginToList("1.1.0", "201.3", null);
+
+        assertEquals(1, pluginsElement.getPlugins().size());
+        assertEquals("201.3", getPluginVersion("1.1.0", pluginsElement).getVersionInfo().getSinceBuildString());
+        assertNull(getPluginVersion("1.1.0", pluginsElement).getVersionInfo().getUntilBuild());
+
+        addPluginToList("1.1.1", "201.4", null);
+        assertEquals(2, pluginsElement.getPlugins().size());
+    }
+
+    @Test
+    public void testPluginWithInvalidSince() {
+        try {
+            addPluginToList(TEST_VERSION, "someInvalidValue", null);
+            fail("Expected some exception to be thrown");
+        } catch (Exception e) {
+            //expected
+        }
+    }
+
+    private void addPluginToList(String version, String since, String until) {
+        PluginElement plugin = new PluginElement();
+        plugin.setId(TEST_ID);
+        plugin.setVersion(version);
+        if (since != null || until != null) {
+            plugin.setVersionInfo(new IdeaVersionElement(since, until));
+        }
+
+        PluginUpdatesUtil.updateOrAdd(plugin, pluginsElement.getPlugins(), logger);
     }
 
 
