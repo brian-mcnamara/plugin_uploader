@@ -62,7 +62,7 @@ As of version 1.2.0, multiple plugin entries with the same ID can be added to th
 as long as the since-build and until-build don't overlap. This is available since IDEA version 193.2956.37 (2019.3)
 which added entry-filtering using since and until build on each entry.
 
-The gradle plugin will check if the current upload, or an existing entry on the repository, has a since-build set before 193.2956.37, 
+The gradle plugin will check if the current upload, or an existing entry on the repository, has a since-build set before 193.2956.37 (or is not set), 
 which prevents multiple entries from being added to ensure compatibility for the older IDEA versions.
 
 Otherwise, multi-versioning is enabled which will update an existing entry if the since-build matches otherwise
