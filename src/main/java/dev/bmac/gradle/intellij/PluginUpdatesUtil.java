@@ -36,7 +36,6 @@ public class PluginUpdatesUtil {
     public static void updateOrAdd(PluginElement plugin, List<PluginElement> plugins, Logger logger) {
         List<Integer> existingEntries = getExistingEntries(plugin, plugins);
         boolean useMultiVersion = true;
-        boolean addEntry = true;
         if (existingEntries.size() > 1) {
             if (plugin.getVersionInfo() != null && plugin.getVersionInfo().getSinceBuild() != null) {
                 if (versionDoesNotAllowMultiVersion(plugin.getVersionInfo().getSinceBuild())) {
@@ -71,7 +70,9 @@ public class PluginUpdatesUtil {
                 plugins.set(existingEntries.get(0), plugin);
                 return;
             }
+            plugins.add(plugin);
         } else {
+            boolean addEntry = true;
             Map<BuildNumber, PluginElement> buildNumberMap = Maps.newHashMap();
             for (Integer existingPosition : existingEntries) {
                 PluginElement existingPlugin = plugins.get(existingPosition);
@@ -133,9 +134,18 @@ public class PluginUpdatesUtil {
                     plugin.getVersionInfo().setUntilBuild(afterPrior);
                 }
             }
-        }
-        if (addEntry) {
-            plugins.add(plugin);
+
+            if (addEntry) {
+                int location = plugins.size();
+                if (existingEntries.size() > 0) {
+                    if (existingEntries.size() == position) {
+                        location = existingEntries.get(position - 1) + 1;
+                    } else {
+                        location = existingEntries.get(position);
+                    }
+                }
+                plugins.add(location, plugin);
+            }
         }
     }
 

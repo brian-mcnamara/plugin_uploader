@@ -7,6 +7,8 @@ import org.gradle.api.logging.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -222,9 +224,38 @@ public class PluginUpdatesUtilTest {
         }
     }
 
+    @Test
+    public void testPluginSorting() {
+        addPluginToList("anotherRandomId", "1.0.0", "211.1", null);
+        addPluginToList(TEST_VERSION, "211.1", null);
+        addPluginToList("1.1.0", "212.1", null);
+        addPluginToList("1.2.0", "212.2", null);
+        addPluginToList("randomId", "1.0.0", "211.1", null);
+        addPluginToList("1.1.1", "212.1", null);
+        addPluginToList("0.0.1", "201.1", null);
+        addPluginToList("1.0.1", "211.2", null);
+        addPluginToList("1.3.0", "213.1", null);
+
+        List<PluginElement> plugins = pluginsElement.getPlugins();
+        assertEquals(8, plugins.size());
+        assertEquals("anotherRandomId", plugins.get(0).getId());
+        assertEquals("0.0.1", plugins.get(1).getVersion());
+        assertEquals(TEST_VERSION, plugins.get(2).getVersion());
+        assertEquals("1.0.1", plugins.get(3).getVersion());
+        assertEquals("1.1.1", plugins.get(4).getVersion());
+        assertEquals("1.2.0", plugins.get(5).getVersion());
+        assertEquals("1.3.0", plugins.get(6).getVersion());
+        assertEquals("randomId", plugins.get(7).getId());
+    }
+
+
     private void addPluginToList(String version, String since, String until) {
+        addPluginToList(TEST_ID, version, since, until);
+    }
+
+    private void addPluginToList(String id, String version, String since, String until) {
         PluginElement plugin = new PluginElement();
-        plugin.setId(TEST_ID);
+        plugin.setId(id);
         plugin.setVersion(version);
         if (since != null || until != null) {
             plugin.setVersionInfo(new IdeaVersionElement(since, until));
