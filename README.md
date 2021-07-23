@@ -24,16 +24,16 @@ uploadPlugin {
     // <code> System.getenv('SOME_ENVIRONMENT_VARIABLE') </code>
     def username = "exampleUsername" 
     def password = "examplePassword"
-    url 'https://repo.example.com/intellij/plugins/'
-    pluginName 'PluginName'
-    file archive.archivePath
-    pluginId project.group
-    version project.version
-    description file('description.txt').text
-    changeNotes file('change-notes.txt').text
-    sinceBuild "211"
+    url.set('https://repo.example.com/intellij/plugins/')
+    pluginName.set('PluginName')
+    file.set(archive.archivePath)
+    pluginId.set(project.group)
+    version.set(project.version)
+    description.set(file('description.txt').text)
+    changeNotes.set(file('change-notes.txt').text)
+    sinceBuild.set("211")
     // Example for Basic type authentication
-    authentication 'Basic ' + new String(Base64.encoder.encode(("$username:$password").bytes))
+    authentication.set('Basic ' + new String(Base64.encoder.encode(("$username:$password").bytes)))
 }
 ```
 

@@ -1,11 +1,11 @@
 package dev.bmac.gradle.intellij.xml;
 
 import com.google.common.net.UrlEscapers;
-import dev.bmac.gradle.intellij.UploadPluginExtension;
 
 import javax.annotation.Nullable;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import java.io.File;
 
 public class PluginElement {
     private String id;
@@ -20,17 +20,16 @@ public class PluginElement {
 
     }
 
-    public PluginElement(UploadPluginExtension extension) {
-        this.id = extension.getPluginId();
-        this.name = extension.getPluginName();
-        this.version = extension.getVersion();
-        this.description = extension.getDescription();
-        this.changeNotes = extension.getChangeNotes();
-        this.url = UrlEscapers.urlFragmentEscaper().escape("./" + extension.getPluginName() + "/" + extension.getFile().getName());
-
-
-        if (extension.getUntilBuild() != null || extension.getSinceBuild() != null) {
-            versionInfo = new IdeaVersionElement(extension.getSinceBuild(), extension.getUntilBuild());
+    public PluginElement(String id, String version, String description, String changeNotes,
+                         String pluginName, String sinceBuild, String untilBuild, File file) {
+        this.id = id;
+        this.url = UrlEscapers.urlFragmentEscaper().escape("./" + pluginName + "/" + file.getName());
+        this.version = version;
+        this.description = description;
+        this.changeNotes = changeNotes;
+        this.name = pluginName;
+        if (untilBuild != null || sinceBuild != null) {
+            versionInfo = new IdeaVersionElement(sinceBuild, untilBuild);
         }
     }
 
