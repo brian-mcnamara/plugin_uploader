@@ -87,7 +87,7 @@ public class UploadPluginTask extends ConventionTask {
                 file.getOrNull() == null || pluginId.getOrNull() == null || version.getOrNull() == null) {
             throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
         }
-        if (updatePluginXml.getOrElse(true) && file.getOrNull() == null) {
+        if (updatePluginXml.getOrElse(true) && updateFile.getOrElse(UPDATE_PLUGINS_FILENAME) == null) {
             throw new RuntimeException("updateFile can not be null");
         }
 
