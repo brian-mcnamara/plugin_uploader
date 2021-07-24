@@ -29,7 +29,7 @@ uploadPlugin {
     file.set(archive.archivePath)
     pluginId.set(project.group)
     version.set(project.version)
-    description.set(file('description.txt').text)
+    pluginDescription.set(file('description.txt').text)
     changeNotes.set(file('change-notes.txt').text)
     sinceBuild.set("211")
     // Example for Basic type authentication
@@ -46,7 +46,7 @@ uploadPlugin {
 | <kbd>file</kbd> - The file to be uploaded to the repo under url + pluginName + file.getName() |  **Required:** true <br/> **Acceptable Values:** A existing file path, ideally should be set via `project.tasks.buildPlugin as Zip` which grabs the file from the IntelliJ gradle plugin |
 | <kbd>pluginId</kbd> - Plugin Id used to match in the updatePlugins.xml | **Required:** true <br/> **Acceptable Values:** Any String|
 | <kbd>version</kbd> - Plugin version used to update updatePlugins.xml | **Required:** true <br/> **Acceptable Values:** Any String| 
-| <kbd>description</kbd> - Plugins description to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String| 
+| <kbd>pluginDescription</kbd> - Plugins description to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String| 
 | <kbd>changeNotes</kbd> - Plugins change notes to be used in updatePlugins.xml | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** Any String|
 | <kbd>sinceBuild</kbd> - Plugins minimum required IDE version. <br/> See [Multi-versioning](#Multi-versioning) for more info. <br/><br/><b>Note:</b> This should match the version specified in plugin.xml. The IDE will still validate the version in plugin.xml if this is excluded, but will not be until its been downloaded. | **Required:** false (required if using multi-versioning) <br/> **Default:** *none* <br/> **Acceptable Values:** A valid build number. See [Build Number Ranges](https://plugins.jetbrains.com/docs/intellij/build-number-ranges.html) for more info.|
 | <kbd>untilBuild</kbd> - Plugins max allowed IDE version. <br/><br/><b>Note:</b> This should match the version specified in plugin.xml. The IDE will still validate the version in plugin.xml if this is excluded, but will not be until its been downloaded. | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** A valid build number. See [Build Number Ranges](https://plugins.jetbrains.com/docs/intellij/build-number-ranges.html) for more info.|

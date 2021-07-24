@@ -17,54 +17,54 @@ public class UploadPluginTask extends ConventionTask {
 
     //The url of the repository where updatePlugins.xml and the plugin zips will be placed
     @Input
-    public Property<String> url;
+    public final Property<String> url;
     //The plugin name
     @Input
-    public Property<String> pluginName;
+    public final Property<String> pluginName;
     //The plugin file to upload
     @InputFile
-    public RegularFileProperty file;
+    public final RegularFileProperty file;
     //Name of the plugin update file.
     @Input
     @Optional
-    public Property<String> updateFile;
+    public final Property<String> updateFile;
     //The plugin unique id
     @Input
-    public Property<String> pluginId;
+    public final Property<String> pluginId;
     //Plugin version
     @Input
-    public Property<String> version;
+    public final Property<String> version;
     //The authentication header to add (optional)
     @Input
     @Optional
-    public Property<String> authentication;
+    public final Property<String> authentication;
     //Description to be added (optional)
     @Input
     @Optional
-    public Property<String> description;
+    public final Property<String> pluginDescription;
     //Change notes to be added (optional)
     @Input
     @Optional
-    public Property<String> changeNotes;
+    public final Property<String> changeNotes;
     //Whether to update {@link updateFile}
     @Input
     @Optional
-    public Property<Boolean> updatePluginXml;
+    public final Property<Boolean> updatePluginXml;
     //Since idea build to prevent installs with earlier versions (optional)
     @Input
     @Optional
-    public Property<String> sinceBuild;
+    public final Property<String> sinceBuild;
     //Until build to also prevent installs with newer versions (optional)
     @Input
     @Optional
-    public Property<String> untilBuild;
+    public final Property<String> untilBuild;
     //HTTP method used for uploading files
     @Input
     @Optional
-    public Property<PluginUploader.UploadMethod> uploadMethod;
+    public final Property<PluginUploader.UploadMethod> uploadMethod;
 
     @Inject
-    public UploadPluginTask(ObjectFactory objectFactory) throws Exception {
+    public UploadPluginTask(ObjectFactory objectFactory) {
         url = objectFactory.property(String.class);
         pluginName = objectFactory.property(String.class);
         file = objectFactory.fileProperty();
@@ -72,7 +72,7 @@ public class UploadPluginTask extends ConventionTask {
         pluginId = objectFactory.property(String.class);
         version = objectFactory.property(String.class);
         authentication = objectFactory.property(String.class);
-        description = objectFactory.property(String.class);
+        pluginDescription = objectFactory.property(String.class);
         changeNotes = objectFactory.property(String.class);
         updatePluginXml = objectFactory.property(Boolean.class);
         sinceBuild = objectFactory.property(String.class);
@@ -83,6 +83,14 @@ public class UploadPluginTask extends ConventionTask {
 
     @TaskAction
     public void execute() throws Exception {
+        if (url.getOrNull() == null || pluginName.getOrNull() == null ||
+                file.getOrNull() == null || pluginId.getOrNull() == null || version.getOrNull() == null) {
+            throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
+        }
+        if (updatePluginXml.getOrElse(true) && file.getOrNull() == null) {
+            throw new RuntimeException("updateFile can not be null");
+        }
+
         new PluginUploader(1000, 5, getLogger(),
                 url.get(),
                 pluginName.get(),
@@ -91,7 +99,7 @@ public class UploadPluginTask extends ConventionTask {
                 pluginId.get(),
                 version.get(),
                 authentication.getOrNull(),
-                description.getOrNull(),
+                pluginDescription.getOrNull(),
                 changeNotes.getOrNull(),
                 updatePluginXml.getOrElse(true),
                 sinceBuild.getOrNull(),

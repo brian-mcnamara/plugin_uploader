@@ -18,6 +18,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -58,10 +59,10 @@ public class PluginUploader {
     private final UploadMethod uploadMethod;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
-                          String url, String pluginName, File file, String updateFile,
-                          String pluginId, String version, String authentication,
-                          String description, String changeNotes, Boolean updatePluginXml,
-                          String sinceBuild, String untilBuild, UploadMethod uploadMethod) throws Exception {
+                          @NotNull String url, @NotNull String pluginName, @NotNull File file, @NotNull String updateFile,
+                          @NotNull String pluginId, @NotNull String version, String authentication,
+                          String description, String changeNotes, @NotNull Boolean updatePluginXml,
+                          String sinceBuild, String untilBuild, @NotNull UploadMethod uploadMethod) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
@@ -90,14 +91,6 @@ public class PluginUploader {
     }
 
     void execute() {
-        if (url == null || pluginName == null ||
-                file == null || pluginId == null || version == null) {
-            throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
-        }
-        if (updatePluginXml && file == null) {
-            throw new RuntimeException("updateFile can not be null");
-        }
-
         postPlugin();
         if (updatePluginXml) {
             final AtomicReference<Throwable> firstException = new AtomicReference<>();
