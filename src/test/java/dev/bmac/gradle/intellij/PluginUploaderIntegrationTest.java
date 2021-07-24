@@ -4,9 +4,6 @@ import com.google.common.collect.Lists;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import okhttp3.Request;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.gradle.internal.impldep.com.amazonaws.util.IOUtils;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -19,7 +16,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.util.List;
 
@@ -46,8 +42,7 @@ public class PluginUploaderIntegrationTest {
 
 
         handler = new Handler();
-        ServerSocket socket = new ServerSocket(0);
-        httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", socket.getLocalPort()), 0);
+        httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         httpServer.createContext("/", handler);
         httpServer.start();
     }
