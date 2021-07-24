@@ -83,14 +83,6 @@ public class UploadPluginTask extends ConventionTask {
 
     @TaskAction
     public void execute() throws Exception {
-        if (url.getOrNull() == null || pluginName.getOrNull() == null ||
-                file.getOrNull() == null || pluginId.getOrNull() == null || version.getOrNull() == null) {
-            throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
-        }
-        if (updatePluginXml.getOrElse(true) && updateFile.getOrElse(UPDATE_PLUGINS_FILENAME) == null) {
-            throw new RuntimeException("updateFile can not be null");
-        }
-
         new PluginUploader(1000, 5, getLogger(),
                 url.get(),
                 pluginName.get(),
@@ -105,5 +97,57 @@ public class UploadPluginTask extends ConventionTask {
                 sinceBuild.getOrNull(),
                 untilBuild.getOrNull(),
                 uploadMethod.getOrElse(PluginUploader.UploadMethod.POST)).execute();
+    }
+
+    public Property<String> getUrl() {
+        return url;
+    }
+
+    public Property<String> getPluginName() {
+        return pluginName;
+    }
+
+    public RegularFileProperty getFile() {
+        return file;
+    }
+
+    public Property<String> getUpdateFile() {
+        return updateFile;
+    }
+
+    public Property<String> getPluginId() {
+        return pluginId;
+    }
+
+    public Property<String> getVersion() {
+        return version;
+    }
+
+    public Property<String> getAuthentication() {
+        return authentication;
+    }
+
+    public Property<String> getPluginDescription() {
+        return pluginDescription;
+    }
+
+    public Property<String> getChangeNotes() {
+        return changeNotes;
+    }
+
+    public Property<Boolean> getUpdatePluginXml() {
+        return updatePluginXml;
+    }
+
+    public Property<String> getSinceBuild() {
+        return sinceBuild;
+    }
+
+    public Property<String> getUntilBuild() {
+        return untilBuild;
+    }
+
+    public Property<PluginUploader.UploadMethod> getUploadMethod() {
+        return uploadMethod;
     }
 }

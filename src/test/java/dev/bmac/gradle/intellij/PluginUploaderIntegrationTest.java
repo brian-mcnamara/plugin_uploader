@@ -105,7 +105,7 @@ public class PluginUploaderIntegrationTest {
         BuildResult buildResult = GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput().withArguments("uploadPlugin").buildAndFail();
-        assertTrue(buildResult.getOutput().contains("Must specify url"));
+        assertTrue(buildResult.getOutput().contains("No value has been specified for property 'url'"));
     }
 
     public static class Handler implements HttpHandler {

@@ -91,6 +91,14 @@ public class PluginUploader {
     }
 
     void execute() {
+        if (url == null || pluginName == null ||
+                file == null || pluginId == null || version == null) {
+            throw new RuntimeException("Must specify url, pluginName, pluginId, version and file to uploadPlugin");
+        }
+        if (updatePluginXml && updateFile == null) {
+            throw new RuntimeException("updateFile can not be null");
+        }
+
         postPlugin();
         if (updatePluginXml) {
             final AtomicReference<Throwable> firstException = new AtomicReference<>();
@@ -321,6 +329,10 @@ public class PluginUploader {
         } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to parse the host", e);
         }
+    }
+
+    String getUrl() {
+        return url;
     }
 
     protected String getLockId() {

@@ -162,15 +162,15 @@ public class IntellijPublishPluginTest {
         }
     }
 
-//    @Test
-//    public void testPluginUpdateEncoding() throws Exception {
-//        builder.setPluginName("plugin with space");
-//        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, webServer.url("/").toString(), VERSION,
-//                null, null, builder.getPluginName(),
-//                null, null, testFile);
-//
-//        assertEquals("./plugin%20with%20space/" + testFile.getName(), builder.build(LOCK_ID));
-//    }
+    @Test
+    public void testPluginUpdateEncoding() throws Exception {
+        builder.setPluginName("plugin with space");
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, builder.getPluginName(),
+                null, null, testFile);
+
+        assertEquals("./plugin%20with%20space/" + testFile.getName(), pluginInstance.getUrl());
+    }
 
     @Test
     public void testOnlyPluginUploadIfWriteToUpdateXmlFalse() throws Exception {
