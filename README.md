@@ -16,8 +16,14 @@ plugins {
 }
 
 uploadPlugin {
-    // Get the plugin distribution file from the buildPlugin task provided from the gradle-intellij-plugin
-    def archive = project.tasks.buildPlugin as Zip
+    // Depend on either signPlugin or buildPlugin. 
+    dependsOn(project.tasks.named('signPlugin'))
+    def signPluginTask = project.tasks.named("signPlugin").get() as SignPluginTask
+    // Get the plugin distribution file from the signPlugin task provided from the gradle-intellij-plugin
+    def archive = signPluginTask.outputArchiveFile.asFile
+    // If you do not wish to sign the plugin, you can use the buildPlugin output instead and specify `archive.archivePath` for the file argument
+    // def archive = project.tasks.buildPlugin as Zip
+    
     // For security, do not hard code usernames or passwords in source control, instead load them through the gradle properties:
     // <code> findProperty('some.gradle.property') as String </code>
     // or through Environment variables:
@@ -26,7 +32,7 @@ uploadPlugin {
     def password = "examplePassword"
     url.set('https://repo.example.com/intellij/plugins/')
     pluginName.set('PluginName')
-    file.set(archive.archivePath)
+    file.set(archive.get())
     pluginId.set(project.group)
     version.set(project.version)
     pluginDescription.set(file('description.txt').text)
@@ -80,6 +86,11 @@ This plugin uses a lock file to prevent concurrent modifications to the updatePl
 While the lock file will be cleaned up, it could be left behind if the process is forcefully interrupted
 requiring the lock to be deleted manually. The lock can be found in the <kbd>url</kbd> root and is named `updatePlugins.xml.lock`
 (lock file name depends on <kbd>updateFile</kbd>)
+
+### Plugin Signing
+
+As of 2021.2 plugin signature are being checked during install. Private plugin can use plugin signing but require the `signPlugin`
+task be implemented and public/private keys be used to sign. While not required to use this plugin, it is recommended.
 
 ## License
 
