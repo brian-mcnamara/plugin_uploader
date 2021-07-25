@@ -1,6 +1,8 @@
 package dev.bmac.gradle.intellij;
 
 import com.google.common.io.Resources;
+import dev.bmac.gradle.intellij.xml.PluginElement;
+import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -32,23 +34,15 @@ public class IntellijPublishPluginTest {
     private static final String VERSION = "1.0";
 
     private MockWebServer webServer;
-    private final IntellijPublishPlugin plugin;
-    private final UploadPluginExtension extension;
+    private PluginUploaderBuilder builder;
     private final Marshaller marshaller;
     private final File testFile;
     private final Logger logger;
 
     public IntellijPublishPluginTest() throws Exception {
-        plugin = new IntellijPublishPlugin(1, 2) {
-            @Override
-            protected String getLockId() {
-                return LOCK_ID;
-            }
-        };
         logger = Logging.getLogger(IntellijPublishPluginTest.class);
-        extension = new UploadPluginExtension();
 
-        JAXBContext contextObj = JAXBContext.newInstance(PluginUpdates.class);
+        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
         marshaller = contextObj.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -66,11 +60,7 @@ public class IntellijPublishPluginTest {
     public void setup() throws Exception {
         webServer = new MockWebServer();
         webServer.start();
-        extension.setUrl(webServer.url("/").toString());
-        extension.setFile(testFile);
-        extension.setPluginId(PLUGIN_ID);
-        extension.setPluginName(PLUGIN_NAME);
-        extension.setVersion(VERSION);
+        builder = new PluginUploaderBuilder(webServer.url("/").toString(), PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
     }
 
     @After
@@ -80,18 +70,19 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testPluginEndToEnd() throws Exception {
-        PluginUpdates.Plugin pluginInstance = new PluginUpdates.Plugin(extension);
-        PluginUpdates updates = new PluginUpdates();
-        updates.updateOrAdd(pluginInstance);
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, PLUGIN_NAME, null, null, testFile);
+        PluginsElement updates = new PluginsElement();
+        updates.getPlugins().add(pluginInstance);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         OutputStreamWriter writer = new OutputStreamWriter(baos);
         marshaller.marshal(updates, writer);
-        String updatePluginExpected = new String(baos.toByteArray());
+        String updatePluginExpected = baos.toString();
 
         enqueueResponses();
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         RecordedRequest request = webServer.takeRequest();
         assertEquals("/" + PLUGIN_NAME + "/" + testFile.getName(), request.getPath());
@@ -99,7 +90,7 @@ public class IntellijPublishPluginTest {
         assertEquals("POST", request.getMethod());
         assertEquals("application/zip", request.getHeader("Content-Type"));
 
-        String lockFile = UploadPluginExtension.UPDATE_PLUGINS_FILENAME + IntellijPublishPlugin.LOCK_FILE_EXTENSION;
+        String lockFile = UploadPluginTask.UPDATE_PLUGINS_FILENAME + PluginUploader.LOCK_FILE_EXTENSION;
         request = webServer.takeRequest();
         assertEquals("/" + lockFile, request.getPath());
         assertEquals("GET", request.getMethod());
@@ -115,11 +106,11 @@ public class IntellijPublishPluginTest {
 
 
         request = webServer.takeRequest();
-        assertEquals("/" + UploadPluginExtension.UPDATE_PLUGINS_FILENAME, request.getPath());
+        assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
         assertEquals("GET", request.getMethod());
 
         request = webServer.takeRequest();
-        assertEquals("/" + UploadPluginExtension.UPDATE_PLUGINS_FILENAME, request.getPath());
+        assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
         assertEquals(updatePluginExpected, request.getBody().readUtf8());
         assertEquals("POST", request.getMethod());
 
@@ -134,7 +125,7 @@ public class IntellijPublishPluginTest {
     }
 
     @Test
-    public void testPluginLockExists() {
+    public void testPluginLockExists() throws Exception {
         //Upload file
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
@@ -143,7 +134,7 @@ public class IntellijPublishPluginTest {
         webServer.enqueue(new MockResponse().setResponseCode(201));
 
         try {
-            plugin.execute(extension, logger);
+            builder.build(LOCK_ID).execute();
             fail("Expected the plugin to fail because lock already exists");
         } catch (GradleException e) {
             assertTrue(e.getCause().getMessage().contains("lock"));
@@ -151,7 +142,7 @@ public class IntellijPublishPluginTest {
     }
 
     @Test
-    public void testPluginLockChanged() {
+    public void testPluginLockChanged() throws Exception {
         //Upload file
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
@@ -164,7 +155,7 @@ public class IntellijPublishPluginTest {
         webServer.enqueue(new MockResponse().setResponseCode(201).setBody("DifferentLock"));
 
         try {
-            plugin.execute(extension, logger);
+            builder.build(LOCK_ID).execute();
             fail("Expected the plugin to fail because lock already exists");
         } catch (GradleException e) {
             assertTrue(e.getCause().getMessage().contains("claimed the lock"));
@@ -172,20 +163,22 @@ public class IntellijPublishPluginTest {
     }
 
     @Test
-    public void testPluginUpdateEncoding() {
-        extension.setPluginName("plugin with space");
-        PluginUpdates.Plugin plugin = new PluginUpdates.Plugin(extension);
+    public void testPluginUpdateEncoding() throws Exception {
+        builder.setPluginName("plugin with space");
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, builder.getPluginName(),
+                null, null, testFile);
 
-        assertEquals("./plugin%20with%20space/" + testFile.getName(), plugin.getUrl());
+        assertEquals("./plugin%20with%20space/" + testFile.getName(), pluginInstance.getUrl());
     }
 
     @Test
     public void testOnlyPluginUploadIfWriteToUpdateXmlFalse() throws Exception {
-        extension.setUpdatePluginXml(false);
+        builder.setUpdatePluginXml(false);
         //Upload file
         webServer.enqueue(new MockResponse().setResponseCode(201));
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         assertEquals(1, webServer.getRequestCount());
         RecordedRequest request = webServer.takeRequest();
@@ -198,11 +191,11 @@ public class IntellijPublishPluginTest {
     @Test
     public void testDifferentUpdatePluginName() throws Exception {
         String newUpdateFile = "differentFile.xml";
-        extension.setUpdateFile(newUpdateFile);
+        builder.setUpdateFile(newUpdateFile);
 
         enqueueResponses();
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         webServer.takeRequest();
         webServer.takeRequest();
@@ -220,17 +213,17 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testHostWithoutTrailingSlash() throws Exception {
-        String host = extension.getUrl() + "/somePath";
-        extension.setUrl(host);
+        String host = builder.getUrl() + "somePath";
+        builder.setUrl(host);
 
         enqueueResponses();
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         RecordedRequest recordedRequest = webServer.takeRequest();
         assertEquals("/somePath/" + PLUGIN_NAME + "/" + testFile.getName(), recordedRequest.getPath());
 
-        String lockFile = UploadPluginExtension.UPDATE_PLUGINS_FILENAME + IntellijPublishPlugin.LOCK_FILE_EXTENSION;
+        String lockFile = UploadPluginTask.UPDATE_PLUGINS_FILENAME + PluginUploader.LOCK_FILE_EXTENSION;
         recordedRequest = webServer.takeRequest();
         assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
 
@@ -241,10 +234,10 @@ public class IntellijPublishPluginTest {
         assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
 
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + UploadPluginExtension.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
+        assertEquals("/somePath/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
 
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + UploadPluginExtension.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
+        assertEquals("/somePath/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
 
         recordedRequest = webServer.takeRequest();
         assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
@@ -255,14 +248,14 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testUpdateXmlFile() throws Exception {
-        extension.setDescription("testDescription");
-        extension.setChangeNotes("testChangeNotes");
-        extension.setUntilBuild("1.1");
-        extension.setSinceBuild("1.0");
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
 
         enqueueResponses();
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         //Post file
         webServer.takeRequest();
@@ -284,16 +277,16 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testUpdateXmlFileWithOldVersion() throws Exception {
-        extension.setDescription("testDescription");
-        extension.setChangeNotes("testChangeNotes");
-        extension.setUntilBuild("1.1");
-        extension.setSinceBuild("1.0");
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
 
         String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
 
         enqueueResponses(originalFile);
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         //Post file
         webServer.takeRequest();
@@ -315,11 +308,11 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testUploadWithPutMethod() throws Exception {
-        extension.setUploadMethod(UploadPluginExtension.UploadMethod.PUT);
+        builder.setUploadMethod(PluginUploader.UploadMethod.PUT);
 
         enqueueResponses();
 
-        plugin.execute(extension, logger);
+        builder.build(LOCK_ID).execute();
 
         //Put file
         RecordedRequest recordedRequest = webServer.takeRequest();
