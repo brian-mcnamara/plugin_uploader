@@ -87,7 +87,7 @@ public class PluginElement {
         this.name = name;
     }
 
-    @XmlElement
+    @XmlElement(name = "idea-version")
     @Nullable
     public IdeaVersionElement getVersionInfo() {
         return versionInfo;
