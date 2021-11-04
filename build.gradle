@@ -30,6 +30,7 @@ def generatedResourcesDir = file("$buildDir/generated-resources")
 processResources {
     def outputFile = file("$generatedResourcesDir/project.version")
     outputs.dir(generatedResourcesDir)
+    inputs.property("version", project.version)
     doFirst {
         outputFile.write(project.version as String)
     }
