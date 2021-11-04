@@ -27,16 +27,12 @@ dependencies {
 }
 
 def generatedResourcesDir = file("$buildDir/generated-resources")
-tasks.register("generateVersionInfo") {
+processResources {
     def outputFile = file("$generatedResourcesDir/project.version")
     outputs.dir(generatedResourcesDir)
     doLast {
         outputFile.write(project.version as String)
     }
-}
-
-tasks.named("processResources") {
-    dependsOn generateVersionInfo
 }
 
 sourceSets {
