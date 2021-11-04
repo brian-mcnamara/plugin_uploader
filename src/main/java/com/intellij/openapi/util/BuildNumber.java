@@ -155,6 +155,8 @@ public final class BuildNumber implements Comparable<BuildNumber> {
 
     /**
      * Added by Brian to get a previous build number from this one.
+     *
+     * @return A new BuildNumber which is one less than the current one
      */
     public BuildNumber minusOne() {
         int[] componentsCopy;

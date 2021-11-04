@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.2.1"
+    id "dev.bmac.intellij.plugin-uploader" version "1.2.2"
 }
 
 uploadPlugin {

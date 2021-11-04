@@ -111,7 +111,11 @@ public class IntellijPublishPluginTest {
 
         request = webServer.takeRequest();
         assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
-        assertEquals(updatePluginExpected, request.getBody().readUtf8());
+        String updatePlugin = request.getBody().readUtf8();
+        String comment = updatePlugin.substring(0, updatePlugin.indexOf('\n'));
+        assertFalse(comment.contains(PluginUploader.UNKNOWN_VERSION));
+        assertTrue(comment.contains(PLUGIN_ID));
+        assertEquals(updatePluginExpected, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
         assertEquals("POST", request.getMethod());
 
 
@@ -163,7 +167,7 @@ public class IntellijPublishPluginTest {
     }
 
     @Test
-    public void testPluginUpdateEncoding() throws Exception {
+    public void testPluginUpdateEncoding() {
         builder.setPluginName("plugin with space");
         PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
                 null, null, builder.getPluginName(),
@@ -272,7 +276,7 @@ public class IntellijPublishPluginTest {
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFile.expected"), Charset.defaultCharset())
                 .replace("{filename}", testFile.getName());
-        assertEquals(expectedFile, updatePlugin);
+        assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 
     @Test
@@ -303,7 +307,7 @@ public class IntellijPublishPluginTest {
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.expected"), Charset.defaultCharset())
                 .replace("{filename}", testFile.getName());
-        assertEquals(expectedFile, updatePlugin);
+        assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 
     @Test

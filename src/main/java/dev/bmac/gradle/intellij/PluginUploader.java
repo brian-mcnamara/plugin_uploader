@@ -7,6 +7,7 @@ import com.github.rholder.retry.Retryer;
 import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
+import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
@@ -27,7 +28,14 @@ import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class PluginUploader {
 
+    static final String UNKNOWN_VERSION = "UNKNOWN";
     static final String LOCK_FILE_EXTENSION = ".lock";
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
 
@@ -201,9 +210,23 @@ public class PluginUploader {
             File file = File.createTempFile("updatePlugins", null);
             file.deleteOnExit();
 
-            FileWriter fw = new FileWriter(file);
-            marshaller.marshal(updates, fw);
-            fw.close();
+            try (FileWriter fw = new FileWriter(file)) {
+
+                Date now = Calendar.getInstance().getTime();
+                DateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss z");
+                df.setTimeZone(TimeZone.getTimeZone("GMT"));
+                String dateString = df.format(now);
+                String pluginVersion = getPluginVersion();
+                fw.append("<!-- File updated on ")
+                        .append(dateString)
+                        .append(" updating '")
+                        .append(pluginId)
+                        .append("' using plugin uploader version ")
+                        .append(pluginVersion)
+                        .append(" -->\n");
+
+                marshaller.marshal(updates, fw);
+            }
 
             String fileName = updateFile;
 
@@ -337,6 +360,19 @@ public class PluginUploader {
 
     protected String getLockId() {
         return UUID.randomUUID().toString();
+    }
+
+    static String getPluginVersion() {
+        try(InputStream is = PluginUploader.class.getResourceAsStream("/project.version")) {
+            if (is != null) {
+                try (InputStreamReader isr = new InputStreamReader(is)) {
+                    return CharStreams.toString(isr);
+                }
+            }
+        } catch (Exception e) {
+            //Ignore
+        }
+        return UNKNOWN_VERSION;
     }
 
     public enum UploadMethod {
