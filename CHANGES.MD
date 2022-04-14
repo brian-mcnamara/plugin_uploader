@@ -1,7 +1,7 @@
 # Change log
 
 ## 1.2.3
-* Added protection against replacing existing releases based on update xml data.
+* Treat versions in updatePlugins.xml as immutable. Without setting mutableRelease property to true, uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
 * Improved some error handling
 
 ## 1.2.2

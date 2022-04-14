@@ -416,7 +416,7 @@ public class IntellijPublishPluginTest {
         builder.setUntilBuild("1.1");
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
-        builder.setAllowOverwrite(true);
+        builder.setMutableRelease(true);
 
         String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
 
@@ -486,7 +486,7 @@ public class IntellijPublishPluginTest {
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
         builder.setUpdatePluginXml(false);
-        builder.setAllowOverwrite(true);
+        builder.setMutableRelease(true);
 
         String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
 

@@ -66,14 +66,14 @@ public class PluginUploader {
     private final String sinceBuild;
     private final String untilBuild;
     private final UploadMethod uploadMethod;
-    private final Boolean allowOverwrite;
+    private final Boolean mutableRelease;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
                           @NotNull String url, @NotNull String pluginName, @NotNull File file, @NotNull String updateFile,
                           @NotNull String pluginId, @NotNull String version, String authentication,
                           String description, String changeNotes, @NotNull Boolean updatePluginXml,
                           String sinceBuild, String untilBuild, @NotNull UploadMethod uploadMethod,
-                          Boolean allowOverwrite) throws Exception {
+                          Boolean mutableRelease) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
@@ -91,7 +91,7 @@ public class PluginUploader {
         this.sinceBuild = sinceBuild;
         this.untilBuild = untilBuild;
         this.uploadMethod = uploadMethod;
-        this.allowOverwrite = allowOverwrite;
+        this.mutableRelease = mutableRelease;
 
         JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
@@ -390,7 +390,7 @@ public class PluginUploader {
                 pluginId.equals(plugin.getId()) && version.equals(plugin.getVersion()));
 
         //Prevent replacing published versions.
-        if (!allowOverwrite && pluginVersionExistsInRepo) {
+        if (!mutableRelease && pluginVersionExistsInRepo) {
             throw new FatalException("Plugin '" + pluginId + "' with version " + version + " already published to repository." +
                     " Because `allowOverwrite` is set to false (default), this publishing attempt will be aborted.");
         }
