@@ -19,6 +19,7 @@ public class PluginUploaderBuilder {
     private String sinceBuild;
     private String untilBuild;
     private PluginUploader.UploadMethod uploadMethod = PluginUploader.UploadMethod.POST;
+    private Boolean allowOverwrite = false;
     private Logger logger;
 
     public PluginUploaderBuilder(String url, String pluginName, File file, String pluginId, String version, Logger logger) {
@@ -86,6 +87,10 @@ public class PluginUploaderBuilder {
         this.logger = logger;
     }
 
+    public void setAllowOverwrite(boolean allowOverwrite) {
+        this.allowOverwrite = allowOverwrite;
+    }
+
     public String getUrl() {
         return url;
     }
@@ -145,7 +150,7 @@ public class PluginUploaderBuilder {
     public PluginUploader build(String lockId) throws Exception {
         return new PluginUploader(1, 2, logger, url, pluginName, file, updateFile,
                 pluginId, version, authentication, description, changeNotes, updatePluginXml,
-                sinceBuild, untilBuild, uploadMethod) {
+                sinceBuild, untilBuild, uploadMethod, allowOverwrite) {
             @Override
             protected String getLockId() {
                 return lockId;

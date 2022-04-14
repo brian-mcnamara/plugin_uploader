@@ -62,6 +62,10 @@ public class UploadPluginTask extends ConventionTask {
     @Input
     @Optional
     public final Property<PluginUploader.UploadMethod> uploadMethod;
+    //Allows replacing an existing release which exists in the updatePluginXml file
+    @Input
+    @Optional
+    public final Property<Boolean> allowOverwrite;
 
     @Inject
     public UploadPluginTask(ObjectFactory objectFactory) {
@@ -78,6 +82,7 @@ public class UploadPluginTask extends ConventionTask {
         sinceBuild = objectFactory.property(String.class);
         untilBuild = objectFactory.property(String.class);
         uploadMethod = objectFactory.property(PluginUploader.UploadMethod.class);
+        allowOverwrite = objectFactory.property(Boolean.class);
     }
 
 
@@ -96,7 +101,8 @@ public class UploadPluginTask extends ConventionTask {
                 updatePluginXml.getOrElse(true),
                 sinceBuild.getOrNull(),
                 untilBuild.getOrNull(),
-                uploadMethod.getOrElse(PluginUploader.UploadMethod.POST)).execute();
+                uploadMethod.getOrElse(PluginUploader.UploadMethod.POST),
+                allowOverwrite.getOrElse(false)).execute();
     }
 
     public Property<String> getUrl() {
@@ -149,5 +155,9 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<PluginUploader.UploadMethod> getUploadMethod() {
         return uploadMethod;
+    }
+
+    public Property<Boolean> getAllowOverwrite() {
+        return allowOverwrite;
     }
 }
