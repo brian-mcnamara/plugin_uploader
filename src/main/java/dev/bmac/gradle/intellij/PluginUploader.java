@@ -54,6 +54,7 @@ public class PluginUploader {
     private final Logger logger;
 
     private final String url;
+    private final boolean absoluteDownloadUrls;
     private final String pluginName;
     private final File file;
     private final String updateFile;
@@ -68,15 +69,17 @@ public class PluginUploader {
     private final UploadMethod uploadMethod;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
-                          @NotNull String url, @NotNull String pluginName, @NotNull File file, @NotNull String updateFile,
-                          @NotNull String pluginId, @NotNull String version, String authentication,
-                          String description, String changeNotes, @NotNull Boolean updatePluginXml,
-                          String sinceBuild, String untilBuild, @NotNull UploadMethod uploadMethod) throws Exception {
+                          @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
+                          @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
+                          @NotNull String version, String authentication, String description, String changeNotes,
+                          @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
+                          @NotNull UploadMethod uploadMethod) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
         this.logger = logger;
         this.url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+        this.absoluteDownloadUrls = absoluteDownloadUrls;
         this.pluginName = pluginName;
         this.file = file;
         this.updateFile = updateFile;
@@ -153,7 +156,7 @@ public class PluginUploader {
                 throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
             }
             PluginElement plugin = new PluginElement(pluginId, version, description, changeNotes, pluginName,
-                    sinceBuild, untilBuild, file);
+                    sinceBuild, untilBuild, file, absoluteDownloadUrls ? url : ".");
             PluginsElement updates = getUpdates();
             PluginUpdatesUtil.updateOrAdd(plugin, updates.getPlugins(), logger);
             postUpdates(updates);

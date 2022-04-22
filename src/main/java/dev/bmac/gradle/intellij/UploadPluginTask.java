@@ -18,6 +18,10 @@ public class UploadPluginTask extends ConventionTask {
     //The url of the repository where updatePlugins.xml and the plugin zips will be placed
     @Input
     public final Property<String> url;
+    //The url of the repository
+    @Input
+    @Optional
+    public final Property<Boolean> absoluteDownloadUrls;
     //The plugin name
     @Input
     public final Property<String> pluginName;
@@ -66,6 +70,7 @@ public class UploadPluginTask extends ConventionTask {
     @Inject
     public UploadPluginTask(ObjectFactory objectFactory) {
         url = objectFactory.property(String.class);
+        absoluteDownloadUrls = objectFactory.property(Boolean.class);
         pluginName = objectFactory.property(String.class);
         file = objectFactory.fileProperty();
         updateFile = objectFactory.property(String.class);
@@ -85,6 +90,7 @@ public class UploadPluginTask extends ConventionTask {
     public void execute() throws Exception {
         new PluginUploader(1000, 5, getLogger(),
                 url.get(),
+                absoluteDownloadUrls.getOrElse(false),
                 pluginName.get(),
                 file.get().getAsFile(),
                 updateFile.getOrElse(UPDATE_PLUGINS_FILENAME),
@@ -101,6 +107,10 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<String> getUrl() {
         return url;
+    }
+
+    public Property<Boolean> getAbsoluteDownloadUrls() {
+        return absoluteDownloadUrls;
     }
 
     public Property<String> getPluginName() {

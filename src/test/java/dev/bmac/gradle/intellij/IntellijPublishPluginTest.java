@@ -71,7 +71,7 @@ public class IntellijPublishPluginTest {
     @Test
     public void testPluginEndToEnd() throws Exception {
         PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
-                null, null, PLUGIN_NAME, null, null, testFile);
+                null, null, PLUGIN_NAME, null, null, testFile, ".");
         PluginsElement updates = new PluginsElement();
         updates.getPlugins().add(pluginInstance);
 
@@ -171,9 +171,20 @@ public class IntellijPublishPluginTest {
         builder.setPluginName("plugin with space");
         PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
                 null, null, builder.getPluginName(),
-                null, null, testFile);
+                null, null, testFile, ".");
 
         assertEquals("./plugin%20with%20space/" + testFile.getName(), pluginInstance.getUrl());
+    }
+
+    @Test
+    public void testPluginUpdateAbsolute() {
+        builder.setPluginName("plugin with space");
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, builder.getPluginName(),
+                null, null, testFile, "https://repo.example.com/foo%20bar");
+
+        // Confirm the base URL is not re-escaped
+        assertEquals("https://repo.example.com/foo%20bar/plugin%20with%20space/" + testFile.getName(), pluginInstance.getUrl());
     }
 
     @Test
