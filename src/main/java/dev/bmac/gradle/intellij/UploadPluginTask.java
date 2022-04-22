@@ -15,10 +15,10 @@ import javax.inject.Inject;
 public class UploadPluginTask extends ConventionTask {
     public static final String UPDATE_PLUGINS_FILENAME = "updatePlugins.xml";
 
-    //The url of the repository where updatePlugins.xml and the plugin zips will be placed
+    //The (encoded) url of the repository where updatePlugins.xml and the plugin zips will be placed
     @Input
     public final Property<String> url;
-    //The url of the repository
+    //Use absolute path for the download url in update plugins xml ($url/$pluginName/${file.getName})
     @Input
     @Optional
     public final Property<Boolean> absoluteDownloadUrls;

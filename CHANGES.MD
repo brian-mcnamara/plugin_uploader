@@ -1,5 +1,8 @@
 # Change log
 
+## 1.2.3
+* Added `absoluteDownloadUrls` to allow absolute urls over relative path in update plugins xml
+
 ## 1.2.2
 * Added comment to updates xml file specifying the latest change details
 
