@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'dev.bmac.intellij.plugins'
-version '1.2.2'
+version '1.2.3'
 
 sourceCompatibility = 1.8
 
