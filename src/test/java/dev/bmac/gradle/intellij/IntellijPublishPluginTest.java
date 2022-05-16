@@ -88,11 +88,14 @@ public class IntellijPublishPluginTest {
         RecordedRequest request = webServer.takeRequest();
         assertEquals("/" + LOCK_FILE, request.getPath());
         assertEquals("GET", request.getMethod());
+        assertNull(request.getHeader("authorization"));
 
         request = webServer.takeRequest();
         assertEquals("/" + LOCK_FILE, request.getPath());
         assertEquals(LOCK_ID, request.getBody().readUtf8());
         assertEquals("POST", request.getMethod());
+        assertNull(request.getHeader("authorization"));
+
 
         request = webServer.takeRequest();
         assertEquals("/" + LOCK_FILE, request.getPath());
@@ -124,6 +127,53 @@ public class IntellijPublishPluginTest {
         request = webServer.takeRequest();
         assertEquals("/" + LOCK_FILE, request.getPath());
         assertEquals("DELETE", request.getMethod());
+        assertNull(request.getHeader("authorization"));
+    }
+
+    @Test
+    public void testPluginEndToEndWithAuth() throws Exception {
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, PLUGIN_NAME, null, null, testFile, ".");
+        PluginsElement updates = new PluginsElement();
+        updates.getPlugins().add(pluginInstance);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        OutputStreamWriter writer = new OutputStreamWriter(baos);
+        marshaller.marshal(updates, writer);
+        String updatePluginExpected = baos.toString();
+
+        enqueueResponses();
+
+        final String authValue = "basic test:pass";
+        builder.setAuthentication(authValue);
+        builder.build(LOCK_ID).execute();
+
+        //get
+        RecordedRequest request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
+
+        //post
+        request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
+
+        //get
+        request = webServer.takeRequest();
+
+        //get
+        request = webServer.takeRequest();
+
+        //post
+        request = webServer.takeRequest();
+
+        //post
+        request = webServer.takeRequest();
+
+        //get
+        request = webServer.takeRequest();
+
+        //delete
+        request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
     }
 
     @Test

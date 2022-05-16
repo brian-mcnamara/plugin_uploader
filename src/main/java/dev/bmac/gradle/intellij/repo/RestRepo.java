@@ -2,6 +2,7 @@ package dev.bmac.gradle.intellij.repo;
 
 import dev.bmac.gradle.intellij.PluginUploader;
 import okhttp3.*;
+import org.gradle.internal.impldep.org.apache.http.client.methods.RequestBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,12 +19,15 @@ public class RestRepo extends RepoType {
 
     @Override
     public <T> T get(String relativePath, Function<RepoObject, T> converter) throws IOException {
-        Request request = new Request.Builder()
+        Request.Builder requestBuilder = new Request.Builder()
                 .url(baseRepoPath + "/" + relativePath)
-                .get()
-                .build();
+                .get();
 
-        try (Response response = CLIENT.newCall(request).execute()) {
+        if (authentication != null) {
+            requestBuilder.addHeader("Authorization", authentication);
+        }
+
+        try (Response response = CLIENT.newCall(requestBuilder.build()).execute()) {
             RepoObject object;
             if (response.code() == 404) {
                 //logger.info("No " + updateFile + " found. Creating new file.");
