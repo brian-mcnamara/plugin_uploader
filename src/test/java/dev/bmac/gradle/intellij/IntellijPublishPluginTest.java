@@ -286,7 +286,7 @@ public class IntellijPublishPluginTest {
         RecordedRequest recordedRequest = webServer.takeRequest();
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFile.expected"), Charset.defaultCharset())
-                .replace("{filename}", testFile.getName());
+                .replace("{filename}", testFile.getName()).replace("\r\n", "\n");
         assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 
@@ -317,7 +317,7 @@ public class IntellijPublishPluginTest {
         RecordedRequest recordedRequest = webServer.takeRequest();
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.expected"), Charset.defaultCharset())
-                .replace("{filename}", testFile.getName());
+                .replace("{filename}", testFile.getName()).replace("\r\n", "\n");
         assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 

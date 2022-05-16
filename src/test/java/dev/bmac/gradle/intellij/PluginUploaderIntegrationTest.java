@@ -63,7 +63,7 @@ public class PluginUploaderIntegrationTest {
                 "uploadPlugin {" +
                 "    url.set('http:/" + httpServer.getAddress().toString() + "')\n" +
                 "    pluginName.set('testPlugin')\n" +
-                "    file.set(file('" + testFile.getPath() + "'))\n" +
+                "    file.set(file('" + testFile.getPath().replace("\\", "/") + "'))\n" +
                 "    pluginId.set('testPlugin')\n" +
                 "    version.set('1.0.0')\n" +
                 "    pluginDescription.set('description')\n" +
@@ -96,7 +96,7 @@ public class PluginUploaderIntegrationTest {
                 "uploadPlugin {" +
                 //"    url.set('http:/" + httpServer.getAddress().toString() + "')\n" +
                 "    pluginName.set('testPlugin')\n" +
-                "    file.set(file('" + testFile.getPath() + "'))\n" +
+                "    file.set(file('" + testFile.getPath().replace("\\", "/") + "'))\n" +
                 "    pluginId.set('testPlugin')\n" +
                 "    version.set('1.0.0')\n" +
                 "}");
