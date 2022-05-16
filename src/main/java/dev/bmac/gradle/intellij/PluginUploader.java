@@ -7,8 +7,12 @@ import com.github.rholder.retry.Retryer;
 import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
+import dev.bmac.gradle.intellij.repo.RepoType;
+import dev.bmac.gradle.intellij.repo.RestRepo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.MediaType;
@@ -25,12 +29,11 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.MalformedURLException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -43,9 +46,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class PluginUploader {
 
+    public static final String MUTABLE_PROPERTY = "dev.bmac.pluginUploader.mutableRelease";
+
     static final String UNKNOWN_VERSION = "UNKNOWN";
     static final String LOCK_FILE_EXTENSION = ".lock";
-    private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
 
     private final Marshaller marshaller;
     private final Unmarshaller unmarshaller;
@@ -68,7 +72,8 @@ public class PluginUploader {
     private final String untilBuild;
     private final UploadMethod uploadMethod;
 
-    private final boolean mutableRelease = Boolean.parseBoolean(System.getProperty("dev.bmac.pluginUploader.mutableRelease", "false"));
+    private final boolean mutableRelease = Boolean.parseBoolean(System.getProperty(MUTABLE_PROPERTY, "false"));
+    private final RepoType repoType;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
                           @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
@@ -102,6 +107,15 @@ public class PluginUploader {
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 
         unmarshaller = contextObj.createUnmarshaller();
+
+        switch (uploadMethod) {
+            case POST:
+            case PUT:
+                this.repoType = new RestRepo(this.url, authentication, uploadMethod);
+                break;
+            default:
+                throw new IllegalStateException("Upload method not implemented for " + uploadMethod.name());
+        }
     }
 
     void execute() {
@@ -190,23 +204,8 @@ public class PluginUploader {
     void postPlugin() {
         String pluginEndpoint = pluginName + "/" + file.getName();
 
-        RequestBody requestBody = RequestBody.create(file, MediaType.parse("application/zip"));
-
         try {
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + pluginEndpoint)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to upload plugin with status: " + response.code());
-                }
-            }
+            repoType.upload(pluginEndpoint, file, "application/zip");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -237,22 +236,7 @@ public class PluginUploader {
 
             String fileName = updateFile;
 
-            RequestBody requestBody = RequestBody.create(file, MediaType.parse("application/xml"));
-
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + fileName)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to upload " + fileName + " with status: " + response.code());
-                }
-            }
+            repoType.upload(fileName, file, "application/xml");
         } catch (IOException | JAXBException e) {
             throw new RuntimeException(e);
         }
@@ -260,27 +244,19 @@ public class PluginUploader {
 
     PluginsElement getUpdates() {
         try {
-            Request request = new Request.Builder()
-                    .url(url + "/" + updateFile)
-                    .get()
-                    .build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (response.code() == 404) {
+            return repoType.get(updateFile, update -> {
+                if (update.exists()) {
+                    try {
+                        return (PluginsElement) unmarshaller.unmarshal(update.getInputStream());
+                    } catch (JAXBException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
                     logger.info("No " + updateFile + " found. Creating new file.");
                     return new PluginsElement();
-                } else if (response.isSuccessful()) {
-                    ResponseBody body = response.body();
-                    if (body == null) {
-                        throw new RuntimeException("Body was null for " + updateFile);
-                    }
-                    return (PluginsElement) unmarshaller.unmarshal(body.byteStream());
-                } else {
-                    throw new RuntimeException("Received an unknown status code while retrieving " + updateFile);
                 }
-
-            }
-        } catch (IOException | JAXBException e) {
+            });
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -288,25 +264,23 @@ public class PluginUploader {
     @Nullable
     String getLock() {
         try {
-            Request request = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .get()
-                    .build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (response.code() == 404) {
-                    return null;
-                } else if (response.isSuccessful()) {
-                    ResponseBody body = response.body();
-                    if (body == null) {
-                        return "";
+            return repoType.get(updateFile + LOCK_FILE_EXTENSION, l -> {
+                if (l.exists()) {
+                    ByteSource bs = new ByteSource() {
+                        @Override
+                        public InputStream openStream() {
+                            return l.getInputStream();
+                        }
+                    };
+                    try {
+                        return bs.asCharSource(StandardCharsets.UTF_8).read();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
-                    return body.string();
                 } else {
-                    throw new RuntimeException("Received an unknown status code while retrieving lock file, status: " + response.code());
+                    return null;
                 }
-
-            }
+            });
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -319,22 +293,11 @@ public class PluginUploader {
      */
     void setLock(String lockValue) {
         try {
-            RequestBody requestBody = RequestBody.create(lockValue, MediaType.parse("text/plain"));
-
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
+            File lockFile = Files.createTempFile(pluginId, "lock").toFile();
+            try (FileOutputStream fos = new FileOutputStream(lockFile)) {
+                fos.write(lockValue.getBytes(StandardCharsets.UTF_8));
             }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Failed to upload lock with status: " + response.code());
-                }
-            }
+            repoType.upload(updateFile + LOCK_FILE_EXTENSION, lockFile, "text/plain");
         } catch (IOException e) {
             logger.error("Failed to upload lock file which will cause this process to fail when we read back the lock", e);
         }
@@ -342,20 +305,7 @@ public class PluginUploader {
 
     void clearLock() throws IOException {
         try {
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .delete();
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Failed to delete lock with status: " + response.code());
-                }
-            }
+            repoType.delete(updateFile + LOCK_FILE_EXTENSION);
         } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to parse the host", e);
         }

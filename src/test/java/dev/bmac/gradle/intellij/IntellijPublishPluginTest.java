@@ -427,39 +427,43 @@ public class IntellijPublishPluginTest {
         builder.setUntilBuild("1.1");
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
-        builder.setMutableRelease(true);
+        System.setProperty("dev.bmac.pluginUploader.mutableRelease", "true");
 
-        String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+        try {
+            String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
 
-        enqueueResponses(originalFile);
+            enqueueResponses(originalFile);
 
-        builder.build(LOCK_ID).execute();
+            builder.build(LOCK_ID).execute();
 
-        assertEquals(8, webServer.getRequestCount());
-        //check lock
-        RecordedRequest recordedRequest = webServer.takeRequest();
-        assertEquals("GET", recordedRequest.getMethod());
-        //set lock
-        recordedRequest = webServer.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        //check lock
-        recordedRequest = webServer.takeRequest();
-        assertEquals("GET", recordedRequest.getMethod());
-        //check update xml
-        recordedRequest = webServer.takeRequest();
-        assertEquals("GET", recordedRequest.getMethod());
-        //Put file
-        recordedRequest = webServer.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        //Put update xml
-        recordedRequest = webServer.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
-        //get lock
-        recordedRequest = webServer.takeRequest();
-        assertEquals("GET", recordedRequest.getMethod());
-        //Delete lock
-        recordedRequest = webServer.takeRequest();
-        assertEquals("DELETE", recordedRequest.getMethod());
+            assertEquals(8, webServer.getRequestCount());
+            //check lock
+            RecordedRequest recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //set lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //check lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //check update xml
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Put file
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put update xml
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //get lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Delete lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("DELETE", recordedRequest.getMethod());
+        } finally {
+            System.clearProperty(PluginUploader.MUTABLE_PROPERTY);
+        }
     }
 
     @Test
@@ -497,21 +501,25 @@ public class IntellijPublishPluginTest {
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
         builder.setUpdatePluginXml(false);
-        builder.setMutableRelease(true);
+        System.setProperty(PluginUploader.MUTABLE_PROPERTY, "true");
 
-        String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+        try {
+            String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
 
-        enqueueResponses(originalFile);
+            enqueueResponses(originalFile);
 
-        builder.build(LOCK_ID).execute();
+            builder.build(LOCK_ID).execute();
 
-        assertEquals(2, webServer.getRequestCount());
-        //check update xml
-        RecordedRequest recordedRequest = webServer.takeRequest();
-        assertEquals("GET", recordedRequest.getMethod());
-        //Put file
-        recordedRequest = webServer.takeRequest();
-        assertEquals("POST", recordedRequest.getMethod());
+            assertEquals(2, webServer.getRequestCount());
+            //check update xml
+            RecordedRequest recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Put file
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+        } finally {
+            System.clearProperty(PluginUploader.MUTABLE_PROPERTY);
+        }
     }
 
     private void enqueueResponses() {
