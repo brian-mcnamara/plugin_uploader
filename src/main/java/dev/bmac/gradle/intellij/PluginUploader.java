@@ -68,6 +68,8 @@ public class PluginUploader {
     private final String untilBuild;
     private final UploadMethod uploadMethod;
 
+    private final boolean mutableRelease = Boolean.parseBoolean(System.getProperty("dev.bmac.pluginUploader.mutableRelease", "false"));
+
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
                           @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
                           @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
@@ -111,11 +113,18 @@ public class PluginUploader {
             throw new RuntimeException("updateFile can not be null");
         }
 
-        postPlugin();
-        if (updatePluginXml) {
+        if (!updatePluginXml) {
+            //Prevent replacing a already published version based on the plugin xml.
+            try {
+                getPluginsThrowIfOverwrite();
+            } catch (FatalException e) {
+                throw new GradleException(e.getMessage());
+            }
+            postPlugin();
+        } else {
             final AtomicReference<Throwable> firstException = new AtomicReference<>();
             Retryer<Void> retryer = RetryerBuilder.<Void>newBuilder()
-                    .retryIfException()
+                    .retryIfException(e -> !(e instanceof FatalException))
                     .withStopStrategy(StopStrategies.stopAfterAttempt(retryTimes))
                     .withWaitStrategy(WaitStrategies.fixedWait(timeoutMs, TimeUnit.MILLISECONDS))
                     .withRetryListener(new RetryListener() {
@@ -129,37 +138,32 @@ public class PluginUploader {
                     .build();
             try {
                 retryer.call(() -> {
-                    postUpdateXml();
+                    postPluginAndUpdateXml();
                     return null;
                 });
             } catch (ExecutionException | RetryException e) {
                 Throwable cause = firstException.get();
-                throw new GradleException("Failed to update " + file, cause != null ? cause : e);
+                if (cause instanceof FatalException) {
+                    throw new GradleException(cause.getMessage(), cause);
+                }
+                throw new GradleException("Failed to publish plugin", cause != null ? cause : e);
             }
         }
     }
 
-    void postUpdateXml() {
-        String lock = null;
+    void postPluginAndUpdateXml() throws RetryableException, FatalException {
+        String lock = setLockThrows();
+
         try {
-            lock = getLock();
-            if (lock != null) {
-                lock = null;
-                throw new GradleException("Lock exists on host. Can not proceed until lock file is cleared." +
-                        " This could be another process currently running.");
-            }
-            lock = getLockId();
-            setLock(lock);
-            //TODO better lock safety
-            if (!lock.equals(getLock())) {
-                lock = null;
-                throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
-            }
+            PluginsElement plugins = getPluginsThrowIfOverwrite();
+
+            postPlugin();
+
             PluginElement plugin = new PluginElement(pluginId, version, description, changeNotes, pluginName,
                     sinceBuild, untilBuild, file, absoluteDownloadUrls ? url : ".");
-            PluginsElement updates = getUpdates();
-            PluginUpdatesUtil.updateOrAdd(plugin, updates.getPlugins(), logger);
-            postUpdates(updates);
+            PluginUpdatesUtil.updateOrAdd(plugin, plugins.getPlugins(), logger);
+
+            postUpdates(plugins);
         } finally {
             if (lock != null) {
                 if (lock.equals(getLock())) {
@@ -174,10 +178,10 @@ public class PluginUploader {
                             return null;
                         });
                     } catch (ExecutionException | RetryException e) {
-                        logger.error("Failed to cleanup " + file + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
+                        throw new FatalException("Failed to cleanup " + file + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
                     }
                 } else {
-                    logger.error("The lock value changed during execution. This is bad! " + file + " may be invalid");
+                    throw new FatalException("The lock value changed during execution. This is bad! The release may be invalid");
                 }
             }
         }
@@ -357,6 +361,44 @@ public class PluginUploader {
         }
     }
 
+    /**
+     * Ensure the lock does not exist, throwing if it exists, and set the lock
+     * @return the lock key
+     */
+    String setLockThrows() throws RetryableException {
+        String lock = getLock();
+        if (lock != null) {
+            throw new RetryableException("Lock exists on host. Can not proceed until lock file is cleared." +
+                    " This could be another process currently running.");
+        }
+        lock = getLockId();
+        setLock(lock);
+        //TODO better lock safety
+        if (!lock.equals(getLock())) {
+            throw new RetryableException("Another process claimed the lock while we were trying to claim it. Please try again later.");
+        }
+        return lock;
+    }
+
+    /**
+     * Returns the plugins xml from the repo checking if the plugin being published exists and throws exception if
+     * allowOverwrite is set to false (default)
+     * @throws if the plugin ID and plugin version being published exists in the plugin xml from the repo
+     * @return the plugins xml from the repository
+     */
+    PluginsElement getPluginsThrowIfOverwrite() throws FatalException {
+        PluginsElement plugins = getUpdates();
+        boolean pluginVersionExistsInRepo = plugins.getPlugins().stream().anyMatch(plugin ->
+                pluginId.equals(plugin.getId()) && version.equals(plugin.getVersion()));
+
+        //Prevent replacing published versions.
+        if (!mutableRelease && pluginVersionExistsInRepo) {
+            throw new FatalException("Plugin '" + pluginId + "' with version " + version + " already published to repository." +
+                    " Because `allowOverwrite` is set to false (default), this publishing attempt will be aborted.");
+        }
+        return plugins;
+    }
+
     String getUrl() {
         return url;
     }
@@ -381,5 +423,21 @@ public class PluginUploader {
     public enum UploadMethod {
         POST,
         PUT;
+    }
+
+    private static class FatalException extends Exception {
+        public FatalException(String message) {
+            super(message);
+        }
+
+        public FatalException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    private static class RetryableException extends Exception {
+        public RetryableException(String message) {
+            super(message);
+        }
     }
 }

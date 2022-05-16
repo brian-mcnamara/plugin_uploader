@@ -66,6 +66,10 @@ public class UploadPluginTask extends ConventionTask {
     @Input
     @Optional
     public final Property<PluginUploader.UploadMethod> uploadMethod;
+    //Allows overwriting/replacing an existing release which exists in the updatePlugin.Xml file
+    @Input
+    @Optional
+    public final Property<Boolean> mutableRelease;
 
     @Inject
     public UploadPluginTask(ObjectFactory objectFactory) {
@@ -83,6 +87,7 @@ public class UploadPluginTask extends ConventionTask {
         sinceBuild = objectFactory.property(String.class);
         untilBuild = objectFactory.property(String.class);
         uploadMethod = objectFactory.property(PluginUploader.UploadMethod.class);
+        mutableRelease = objectFactory.property(Boolean.class);
     }
 
 
@@ -159,5 +164,9 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<PluginUploader.UploadMethod> getUploadMethod() {
         return uploadMethod;
+    }
+
+    public Property<Boolean> getMutableRelease() {
+        return mutableRelease;
     }
 }

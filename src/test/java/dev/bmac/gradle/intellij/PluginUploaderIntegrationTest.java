@@ -77,7 +77,7 @@ public class PluginUploaderIntegrationTest {
                 .withPluginClasspath().forwardOutput().withArguments("--stacktrace", "uploadPlugin").build();
 
         List<RecordedRequest> requests = handler.requests;
-        assertEquals("Basic pass", requests.get(0).auth);
+        assertEquals("Basic pass", requests.get(1).auth);
 
         RecordedRequest updateXml = requests.get(5);
         assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, updateXml.path);

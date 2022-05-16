@@ -1,5 +1,9 @@
 # Change log
 
+## 1.3.0
+* Treat versions in updatePlugins.xml as immutable. Without setting mutableRelease property to true, uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
+* Improved some error handling
+
 ## 1.2.3
 * Added `absoluteDownloadUrls` to allow absolute urls over relative path in update plugins xml
 
