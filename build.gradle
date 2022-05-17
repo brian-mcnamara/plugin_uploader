@@ -30,7 +30,6 @@ dependencies {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
-//    testCompile 'io.findify:s3mock_2.13:0.2.6'
 }
 
 def generatedResourcesDir = file("$buildDir/generated-resources")

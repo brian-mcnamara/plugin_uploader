@@ -66,10 +66,6 @@ public class UploadPluginTask extends ConventionTask {
     @Input
     @Optional
     public final Property<PluginUploader.RepoType> repoType;
-    //Allows overwriting/replacing an existing release which exists in the updatePlugin.Xml file
-    @Input
-    @Optional
-    public final Property<Boolean> mutableRelease;
 
 
     /**
@@ -96,7 +92,6 @@ public class UploadPluginTask extends ConventionTask {
         sinceBuild = objectFactory.property(String.class);
         untilBuild = objectFactory.property(String.class);
         repoType = objectFactory.property(PluginUploader.RepoType.class);
-        mutableRelease = objectFactory.property(Boolean.class);
         uploadMethod = objectFactory.property(PluginUploader.UploadMethod.class);
     }
 
@@ -193,10 +188,6 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<PluginUploader.RepoType> getRepoType() {
         return repoType;
-    }
-
-    public Property<Boolean> getMutableRelease() {
-        return mutableRelease;
     }
 
     @Deprecated

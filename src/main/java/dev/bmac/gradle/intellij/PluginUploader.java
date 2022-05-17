@@ -32,7 +32,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class PluginUploader {
 
-    public static final String MUTABLE_PROPERTY = "dev.bmac.pluginUploader.mutableRelease";
+    //System property to allow skipping the check which prevents replacing a released release.
+    public static final String RELEASE_CHECK_PROPERTY = "dev.bmac.pluginUploader.skipReleaseCheck";
 
     static final String UNKNOWN_VERSION = "UNKNOWN";
     static final String LOCK_FILE_EXTENSION = ".lock";
@@ -58,7 +59,7 @@ public class PluginUploader {
     private final String untilBuild;
     private final RepoType repoType;
 
-    private final boolean mutableRelease = Boolean.parseBoolean(System.getProperty(MUTABLE_PROPERTY, "false"));
+    private final boolean skipReleaseCheck = Boolean.parseBoolean(System.getProperty(RELEASE_CHECK_PROPERTY, "false"));
     private final Repo repo;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
@@ -230,9 +231,7 @@ public class PluginUploader {
                 marshaller.marshal(updates, fw);
             }
 
-            String fileName = updateFile;
-
-            repo.upload(fileName, file, "application/xml");
+            repo.upload(updateFile, file, "application/xml");
         } catch (IOException | JAXBException e) {
             throw new RuntimeException(e);
         }
@@ -352,7 +351,7 @@ public class PluginUploader {
                 pluginId.equals(plugin.getId()) && version.equals(plugin.getVersion()));
 
         //Prevent replacing published versions.
-        if (!mutableRelease && pluginVersionExistsInRepo) {
+        if (!skipReleaseCheck && pluginVersionExistsInRepo) {
             throw new FatalException("Plugin '" + pluginId + "' with version " + version + " already published to repository." +
                     " Because `allowOverwrite` is set to false (default), this publishing attempt will be aborted.");
         }

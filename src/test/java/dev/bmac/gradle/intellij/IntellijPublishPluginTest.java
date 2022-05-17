@@ -512,7 +512,7 @@ public class IntellijPublishPluginTest {
             recordedRequest = webServer.takeRequest();
             assertEquals("DELETE", recordedRequest.getMethod());
         } finally {
-            System.clearProperty(PluginUploader.MUTABLE_PROPERTY);
+            System.clearProperty(PluginUploader.RELEASE_CHECK_PROPERTY);
         }
     }
 
@@ -551,7 +551,7 @@ public class IntellijPublishPluginTest {
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
         builder.setUpdatePluginXml(false);
-        System.setProperty(PluginUploader.MUTABLE_PROPERTY, "true");
+        System.setProperty(PluginUploader.RELEASE_CHECK_PROPERTY, "true");
 
         try {
             String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
@@ -568,7 +568,7 @@ public class IntellijPublishPluginTest {
             recordedRequest = webServer.takeRequest();
             assertEquals("POST", recordedRequest.getMethod());
         } finally {
-            System.clearProperty(PluginUploader.MUTABLE_PROPERTY);
+            System.clearProperty(PluginUploader.RELEASE_CHECK_PROPERTY);
         }
     }
 
