@@ -13,6 +13,7 @@ import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
 import dev.bmac.gradle.intellij.repo.RepoType;
 import dev.bmac.gradle.intellij.repo.RestRepo;
+import dev.bmac.gradle.intellij.repo.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.MediaType;
@@ -108,14 +109,7 @@ public class PluginUploader {
 
         unmarshaller = contextObj.createUnmarshaller();
 
-        switch (uploadMethod) {
-            case POST:
-            case PUT:
-                this.repoType = new RestRepo(this.url, authentication, uploadMethod);
-                break;
-            default:
-                throw new IllegalStateException("Upload method not implemented for " + uploadMethod.name());
-        }
+        this.repoType = getRepoType();
     }
 
     void execute() {
@@ -288,18 +282,23 @@ public class PluginUploader {
 
     /**
      * Upload the lock to the server.
-     * Note: This does not thow exceptions. It is expected to check the lock after this method is called to verify this
+     * Note: This does not throw exceptions. It is expected to check the lock after this method is called to verify this
      * process acquired the lock.
      */
     void setLock(String lockValue) {
+        File lockFile = null;
         try {
-            File lockFile = Files.createTempFile(pluginId, "lock").toFile();
+            lockFile = Files.createTempFile(pluginId, "lock").toFile();
             try (FileOutputStream fos = new FileOutputStream(lockFile)) {
                 fos.write(lockValue.getBytes(StandardCharsets.UTF_8));
             }
             repoType.upload(updateFile + LOCK_FILE_EXTENSION, lockFile, "text/plain");
         } catch (IOException e) {
             logger.error("Failed to upload lock file which will cause this process to fail when we read back the lock", e);
+        } finally {
+            if (lockFile != null) {
+                lockFile.delete();
+            }
         }
     }
 
@@ -357,6 +356,18 @@ public class PluginUploader {
         return UUID.randomUUID().toString();
     }
 
+    protected RepoType getRepoType() {
+        switch (uploadMethod) {
+            case POST:
+            case PUT:
+                return new RestRepo(this.url, authentication, uploadMethod);
+            case S3:
+                return new S3Repo(this.url, authentication);
+            default:
+                throw new IllegalStateException("Upload method not implemented for " + uploadMethod.name());
+        }
+    }
+
     static String getPluginVersion() {
         try(InputStream is = PluginUploader.class.getResourceAsStream("/project.version")) {
             if (is != null) {
@@ -372,7 +383,8 @@ public class PluginUploader {
 
     public enum UploadMethod {
         POST,
-        PUT;
+        PUT,
+        S3
     }
 
     private static class FatalException extends Exception {

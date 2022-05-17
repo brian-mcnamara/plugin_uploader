@@ -1,5 +1,6 @@
 package dev.bmac.gradle.intellij;
 
+import dev.bmac.gradle.intellij.repo.RepoType;
 import org.gradle.api.logging.Logger;
 
 import java.io.File;
@@ -21,6 +22,7 @@ public class PluginUploaderBuilder {
     private String untilBuild;
     private PluginUploader.UploadMethod uploadMethod = PluginUploader.UploadMethod.POST;
     private Logger logger;
+    private RepoType repoType = null;
 
     public PluginUploaderBuilder(String url, String pluginName, File file, String pluginId, String version, Logger logger) {
         this.url = url;
@@ -85,6 +87,10 @@ public class PluginUploaderBuilder {
 
     public void setUploadMethod(PluginUploader.UploadMethod uploadMethod) {
         this.uploadMethod = uploadMethod;
+    }
+
+    public void setRepoType(RepoType repoType) {
+        this.repoType = repoType;
     }
 
     public void setLogger(Logger logger) {
@@ -158,6 +164,15 @@ public class PluginUploaderBuilder {
             @Override
             protected String getLockId() {
                 return lockId;
+            }
+
+            @Override
+            protected RepoType getRepoType() {
+                if (repoType == null) {
+                    return super.getRepoType();
+                } else {
+                    return repoType;
+                }
             }
         };
     }
