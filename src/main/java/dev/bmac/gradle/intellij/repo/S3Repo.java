@@ -4,11 +4,12 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
-import org.jetbrains.annotations.TestOnly;
+import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,34 +17,51 @@ import java.net.URI;
 import java.util.function.Function;
 
 /**
- * https://bucket-name.s3.Region.amazonaws.com/key-name
+ * Implementation for S3 compatible repositories
  */
 public class S3Repo extends Repo {
-
-    public static final String BUCKET_OVERRIDE = "dev.bmac.pluginUploader.s3.bucket";
-    public static final String HOST_OVERRIDE = "dev.bmac.pluginUploader.s3.host";
 
     private final String bucketName;
     private final String region;
     private final AmazonS3 client;
-    public S3Repo(String baseRepoPath, String authentication) {
-        super(getBaseKeyPath(baseRepoPath), authentication);
+
+    public S3Repo(String baseRepoPath, String authentication, Logger logger) {
+        super(getBaseKeyPath(baseRepoPath), authentication, logger);
+
+        AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
+
         URI uri = URI.create(baseRepoPath);
         String host = uri.getHost();
         String[] hostParts = host.split("\\.");
-        assert hostParts.length == 5 : "Expect the url to be in the form of bucket-name.s3.Region.amazonaws.com";
-        bucketName = hostParts[0];
-        region = hostParts[2];
+        if (hostParts.length == 5 && hostParts[3].equals("amazonaws")) {
+            //Actual amazon-S3
+            bucketName = hostParts[0];
+            region = hostParts[2];
+            builder.setRegion(region);
+        } else {
+            //Non-amazon implementation, used in tests, but minio should work too
+            //Hack, but I don't want to add a property for this... If anyone sees this, and uses non-aws s3 compatible S3, feel free to recommend a better approach.
+            bucketName = uri.getUserInfo();
+            region = "us-east-1";
+            builder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(String.format("%s://%s:%d", uri.getScheme(), uri.getHost(), uri.getPort()), region));
+            builder.enablePathStyleAccess();
+        }
 
-        client = createClient(baseRepoPath, authentication);
-    }
+        if (authentication != null) {
+            String[] parts = authentication.split(":");
+            AWSCredentials credentials;
+            if (parts.length == 2) {
+                credentials = new BasicAWSCredentials(parts[0], parts[1]);
+            } else if (parts.length == 3) {
+                credentials = new BasicSessionCredentials(parts[0], parts[1], parts[2]);
+            } else {
+                throw new IllegalArgumentException("S3 authentication has an invalid number of parts, " +
+                        "expected to have comma separated values for access key, secret key and session key (if applicable)");
+            }
+            builder.setCredentials(new AWSStaticCredentialsProvider(credentials));
+        }
 
-    @TestOnly
-    public S3Repo(String baseRepoPath, String authentication, String bucketName, String region, AmazonS3 client) {
-        super(getBaseKeyPath(baseRepoPath), authentication);
-        this.bucketName = bucketName;
-        this.region = region;
-        this.client = client;
+        client = builder.build();
     }
 
     @Override
@@ -67,26 +85,6 @@ public class S3Repo extends Repo {
     @Override
     public void delete(String relativePath) throws IOException {
         client.deleteObject(bucketName, baseRepoPath + "/" + relativePath);
-    }
-
-    protected AmazonS3 createClient(String baseRepoPath, String authentication) {
-        AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
-        if (authentication != null) {
-            String[] parts = authentication.split(":");
-            AWSCredentials credentials;
-            if (parts.length == 2) {
-                credentials = new BasicAWSCredentials(parts[0], parts[1]);
-            } else if (parts.length == 3) {
-                credentials = new BasicSessionCredentials(parts[0], parts[1], parts[2]);
-            } else {
-                throw new IllegalArgumentException("S3 authentication has an invalid number of parts, " +
-                        "expected to have comma separated values for access key, secret key and session key (if applicable)");
-            }
-            builder.setCredentials(new AWSStaticCredentialsProvider(credentials));
-        }
-        builder.setRegion(region);
-
-        return builder.build();
     }
 
     private static String getBaseKeyPath(String baseRepoPath) {

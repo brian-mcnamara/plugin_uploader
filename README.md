@@ -1,6 +1,7 @@
 # IntelliJ plugin uploader
 
-A gradle plugin to take care of uploading an IntelliJ plugin and updating updatePlugins.xml hosted on a private repository.
+A gradle plugin to take care of uploading an IntelliJ plugin and updating updatePlugins.xml hosted on a private repository,
+including S3-compatible stores.
 
 ## Usage
 
@@ -65,9 +66,20 @@ uploadPlugin {
 
 ## Supported repo types
 
-As of version 1.3.0, this plugin supports standard REST style repositories (Nexus, artifactory, etc) which accept uploads
-via POST/PUT requests. In addition, the plugin supports Amazon S3 compatible stores as well. 
+This plugin supports standard REST style repositories (Nexus, artifactory, etc) which accept uploads
+via POST/PUT requests. As of version 1.3.0, the plugin now supports Amazon S3 compatible stores as well. 
 
+### S3
+
+S3 compatible repositories are supported with the <kbd>repoType</kbd> set to `S3`. Some requirements should be noted:
+
+* AWS S3 should use [virtual-hosted-style endpoints](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html)
+  as the <kbd>url</kbd>, for example `https://bucket-name.s3.Region.amazonaws.com/folder`
+* non-AWS S3 endpoints need to specify the bucket name as the userinfo in the url, for example
+  `https://bucket-name@storage.example.com/folder`
+* Any path added to the <kbd>url</kbd> will be the directory structure under the bucket
+* Authentication can be specified by any means accepted by the [aws sdk](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html)
+  or can be passed into the <kbd>authentication</kbd> as a colon (`:`) separated list of access key, secret key, or access key, secret key, session token.
 
 ## Multi-versioning
 
@@ -93,6 +105,10 @@ This plugin uses a lock file to prevent concurrent modifications to the updatePl
 While the lock file will be cleaned up, it could be left behind if the process is forcefully interrupted
 requiring the lock to be deleted manually. The lock can be found in the <kbd>url</kbd> root and is named `updatePlugins.xml.lock`
 (lock file name depends on <kbd>updateFile</kbd>)
+
+As of 1.3.0, a check will be performed to prevent replacing an existing release. This only checks updatePlugins.xml
+versions, so any versions not in this file will be allowed to be replaced. This can be disabled using 
+`dev.bmac.pluginUploader.skipReleaseCheck` system property set to `true`
 
 ### Plugin Signing
 

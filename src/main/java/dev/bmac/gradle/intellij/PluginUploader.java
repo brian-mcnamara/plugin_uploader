@@ -366,9 +366,9 @@ public class PluginUploader {
         switch (repoType) {
             case REST_POST:
             case REST_PUT:
-                return new RestRepo(this.url, authentication, repoType);
+                return new RestRepo(url, authentication, logger, repoType);
             case S3:
-                return new S3Repo(this.url, authentication);
+                return new S3Repo(url, authentication, logger);
             default:
                 throw new IllegalStateException("Upload method not implemented for " + repoType.name());
         }

@@ -3,17 +3,15 @@ package dev.bmac.gradle.intellij;
 import com.adobe.testing.s3mock.junit4.S3MockRule;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
-import dev.bmac.gradle.intellij.repo.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
-import okhttp3.mockwebserver.MockWebServer;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -28,7 +26,7 @@ import static org.junit.Assert.*;
 public class S3PublishPluginTest {
 
     @ClassRule
-    public static final S3MockRule S3_MOCK_RULE = S3MockRule.builder().silent().build();
+    public static final S3MockRule S3_MOCK_RULE = S3MockRule.builder().withSecureConnection(false).silent().build();
 
     private static final String FILE_CONTENTS = "testFileContents";
     private static final String BUCKET_NAME = "test-bucket";
@@ -65,7 +63,10 @@ public class S3PublishPluginTest {
 
         client.createBucket(BUCKET_NAME);
         String endpoint = S3_MOCK_RULE.getServiceEndpoint();
-        builder = new PluginUploaderBuilder(endpoint + "/plugins", PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
+        URIBuilder uriBuilder = new URIBuilder(endpoint);
+        uriBuilder.setUserInfo(BUCKET_NAME)
+                  .setPath("/plugins");
+        builder = new PluginUploaderBuilder(uriBuilder.toString(), PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
     }
 
     @Test
@@ -80,8 +81,7 @@ public class S3PublishPluginTest {
         marshaller.marshal(updates, writer);
         String updatePluginExpected = baos.toString();
 
-        builder.setRepoType(new S3Repo("https://localhost/plugins", "todo", BUCKET_NAME, "us-west-2", client));
-        builder.build(LOCK_ID).execute();
+        builder.setRepoType(PluginUploader.RepoType.S3).setAuthentication("foo:bar").build(LOCK_ID).execute();
 
         S3Object updateObject = client.getObject(BUCKET_NAME, "plugins/updatePlugins.xml");
         String updatePlugin = IOUtils.toString(updateObject.getObjectContent(), StandardCharsets.UTF_8);

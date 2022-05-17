@@ -3,10 +3,11 @@
 ## 1.3.0
 ### Added
 * Treat versions in updatePlugins.xml as immutable. Without setting mutableRelease property to true, uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
-* Added S3 support
+* Added S3-compatible repository support
 ### Changed
 * Migrated `uploadMethod` to `repoType` changing the values from `POST`/`PUT` to `REST_POST` and `REST_PUT`
 * Improved some error handling
+* Added authentication to GET requests to support [fully authenticated repositories](https://github.com/JetBrains/intellij-community/blob/master/platform/platform-impl/src/com/intellij/ide/plugins/auth/PluginRepositoryAuthProvider.java)
 
 ## 1.2.3
 * Added `absoluteDownloadUrls` to allow absolute urls over relative path in update plugins xml

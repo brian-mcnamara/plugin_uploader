@@ -2,16 +2,20 @@ package dev.bmac.gradle.intellij.repo;
 
 import dev.bmac.gradle.intellij.PluginUploader;
 import okhttp3.*;
+import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
 
+/**
+ * Implementation for REST-style repositories (Nexus, Artifactory, etc)
+ */
 public class RestRepo extends Repo {
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
     private final String method;
-    public RestRepo(String baseRepoPath, String authentication, PluginUploader.RepoType repoType) {
-        super(baseRepoPath, authentication);
+    public RestRepo(String baseRepoPath, String authentication, Logger logger, PluginUploader.RepoType repoType) {
+        super(baseRepoPath, authentication, logger);
         switch (repoType) {
             case REST_POST:
                 method = "POST";

@@ -33,68 +33,79 @@ public class PluginUploaderBuilder {
         this.logger = logger;
     }
 
-    public void setUrl(String url) {
+    public PluginUploaderBuilder setUrl(String url) {
         this.url = url;
+        return this;
     }
 
-    public void setAbsoluteDownloadUrls(final boolean absoluteDownloadUrls) {
+    public PluginUploaderBuilder setAbsoluteDownloadUrls(final boolean absoluteDownloadUrls) {
         this.absoluteDownloadUrls = absoluteDownloadUrls;
+        return this;
     }
 
-    public void setPluginName(String pluginName) {
+    public PluginUploaderBuilder setPluginName(String pluginName) {
         this.pluginName = pluginName;
+        return this;
     }
 
-    public void setFile(File file) {
+    public PluginUploaderBuilder setFile(File file) {
         this.file = file;
+        return this;
     }
 
-    public void setUpdateFile(String updateFile) {
+    public PluginUploaderBuilder setUpdateFile(String updateFile) {
         this.updateFile = updateFile;
+        return this;
     }
 
-    public void setPluginId(String pluginId) {
+    public PluginUploaderBuilder setPluginId(String pluginId) {
         this.pluginId = pluginId;
+        return this;
     }
 
-    public void setVersion(String version) {
+    public PluginUploaderBuilder setVersion(String version) {
         this.version = version;
+        return this;
     }
 
-    public void setAuthentication(String authentication) {
+    public PluginUploaderBuilder setAuthentication(String authentication) {
         this.authentication = authentication;
+        return this;
     }
 
-    public void setDescription(String description) {
+    public PluginUploaderBuilder setDescription(String description) {
         this.description = description;
+        return this;
     }
 
-    public void setChangeNotes(String changeNotes) {
+    public PluginUploaderBuilder setChangeNotes(String changeNotes) {
         this.changeNotes = changeNotes;
+        return this;
     }
 
-    public void setUpdatePluginXml(Boolean updatePluginXml) {
+    public PluginUploaderBuilder setUpdatePluginXml(Boolean updatePluginXml) {
         this.updatePluginXml = updatePluginXml;
+        return this;
     }
 
-    public void setSinceBuild(String sinceBuild) {
+    public PluginUploaderBuilder setSinceBuild(String sinceBuild) {
         this.sinceBuild = sinceBuild;
+        return this;
     }
 
-    public void setUntilBuild(String untilBuild) {
+    public PluginUploaderBuilder setUntilBuild(String untilBuild) {
         this.untilBuild = untilBuild;
+        return this;
     }
 
-    public void setRepoType(PluginUploader.RepoType repoType) {
+    public PluginUploaderBuilder setRepoType(PluginUploader.RepoType repoType) {
         this.repoType = repoType;
+        return this;
     }
 
-    public void setRepoType(Repo repo) {
-        this.repo = repo;
-    }
-
-    public void setLogger(Logger logger) {
+    public PluginUploaderBuilder setLogger(Logger logger) {
         this.logger = logger;
+        return this;
     }
 
     public String getUrl() {
