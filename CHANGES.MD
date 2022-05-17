@@ -1,7 +1,11 @@
 # Change log
 
 ## 1.3.0
+### Added
 * Treat versions in updatePlugins.xml as immutable. Without setting mutableRelease property to true, uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
+* Added S3 support
+### Changed
+* Migrated `uploadMethod` to `repoType` changing the values from `POST`/`PUT` to `REST_POST` and `REST_PUT`
 * Improved some error handling
 
 ## 1.2.3

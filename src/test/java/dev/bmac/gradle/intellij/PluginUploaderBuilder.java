@@ -1,6 +1,6 @@
 package dev.bmac.gradle.intellij;
 
-import dev.bmac.gradle.intellij.repo.RepoType;
+import dev.bmac.gradle.intellij.repo.Repo;
 import org.gradle.api.logging.Logger;
 
 import java.io.File;
@@ -20,9 +20,9 @@ public class PluginUploaderBuilder {
     private Boolean updatePluginXml = true;
     private String sinceBuild;
     private String untilBuild;
-    private PluginUploader.UploadMethod uploadMethod = PluginUploader.UploadMethod.POST;
+    private PluginUploader.RepoType repoType = PluginUploader.RepoType.REST_POST;
     private Logger logger;
-    private RepoType repoType = null;
+    private Repo repo = null;
 
     public PluginUploaderBuilder(String url, String pluginName, File file, String pluginId, String version, Logger logger) {
         this.url = url;
@@ -85,12 +85,12 @@ public class PluginUploaderBuilder {
         this.untilBuild = untilBuild;
     }
 
-    public void setUploadMethod(PluginUploader.UploadMethod uploadMethod) {
-        this.uploadMethod = uploadMethod;
+    public void setRepoType(PluginUploader.RepoType repoType) {
+        this.repoType = repoType;
     }
 
-    public void setRepoType(RepoType repoType) {
-        this.repoType = repoType;
+    public void setRepoType(Repo repo) {
+        this.repo = repo;
     }
 
     public void setLogger(Logger logger) {
@@ -149,8 +149,8 @@ public class PluginUploaderBuilder {
         return untilBuild;
     }
 
-    public PluginUploader.UploadMethod getUploadMethod() {
-        return uploadMethod;
+    public PluginUploader.RepoType getRepoType() {
+        return repoType;
     }
 
     public Logger getLogger() {
@@ -160,18 +160,18 @@ public class PluginUploaderBuilder {
     public PluginUploader build(String lockId) throws Exception {
         return new PluginUploader(1, 2, logger, url, absoluteDownloadUrls, pluginName, file,
                 updateFile, pluginId, version, authentication, description, changeNotes, updatePluginXml,
-                sinceBuild, untilBuild, uploadMethod) {
+                sinceBuild, untilBuild, repoType) {
             @Override
             protected String getLockId() {
                 return lockId;
             }
 
             @Override
-            protected RepoType getRepoType() {
-                if (repoType == null) {
+            protected Repo getRepoType() {
+                if (repo == null) {
                     return super.getRepoType();
                 } else {
-                    return repoType;
+                    return repo;
                 }
             }
         };

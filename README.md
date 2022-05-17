@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.2.2"
+    id "dev.bmac.intellij.plugin-uploader" version "1.3.0"
 }
 
 uploadPlugin {
@@ -22,7 +22,7 @@ uploadPlugin {
     // Get the plugin distribution file from the signPlugin task provided from the gradle-intellij-plugin
     def archive = signPluginTask.outputArchiveFile.asFile
     // If you do not wish to sign the plugin, you can use the buildPlugin output instead and specify `archive.archivePath` for the file argument
-    // def archive = project.tasks.buildPlugin as Zip
+    // def archive = project.tasks.buildPlugin.get().archiveFile
     
     // For security, do not hard code usernames or passwords in source control, instead load them through the gradle properties:
     // <code> findProperty('some.gradle.property') as String </code>
@@ -59,8 +59,14 @@ uploadPlugin {
 | <kbd>authentication</kbd> - Authentication string used to publish files to the private repo. Will be used as the authorization header                                                                                                                                                                                                              | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** <ul> <li> `Basic [authenticationString]` </li> <li> `Bearer [bearerToken] ` </li> </ul>                                                                                   |
 | <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. <br/><br/><b>Note:</b> See [Publishing a Plugin to a Custom Plugin Repository](https://jetbrains.org/intellij/sdk/docs/basics/getting_started/update_plugins_format.html#describing-your-plugins-in-updatepluginsxml-file) for more information about updatePlugins.xml | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String                                                                                                                                          |
 | <kbd>updatePluginXml</kbd> - Gates whether updatePlugins.xml is updated.                                                                                                                                                                                                                                                                           | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false`                                                                                                                                                 |
-| <kbd>uploadMethod</kbd> - Sets the HTTP method used for uploading files to the repo.                                                                                                                                                                                                                                                               | **Required:** false <br/> **Default:** <kbd>POST</kbd> <br/> **Acceptable Values:** <ul> <li>POST</li><li>PUT</li></ul>                                                                                                                              |
+| <kbd>repoType</kbd> - Sets the type of repository operations to use.                                                                                                                                                                                                                                                                               | **Required:** false <br/> **Default:** <kbd>REST_POST</kbd> <br/> **Acceptable Values:** <ul> <li>REST_POST</li><li>REST_PUT</li><li>S3</li></ul>                                                                                                    |
 | <kbd>absoluteDownloadUrls</kbd> - Use absolute url to the plugin download in update plugins xml over relative paths.                                                                                                                                                                                                                               | **Required:** false <br/> **Default:** <kbd>false</kbd> <br/> **Acceptable Values:** `true` / `false`                                                                                                                                                |
+
+
+## Supported repo types
+
+As of version 1.3.0, this plugin supports standard REST style repositories (Nexus, artifactory, etc) which accept uploads
+via POST/PUT requests. In addition, the plugin supports Amazon S3 compatible stores as well. 
 
 
 ## Multi-versioning

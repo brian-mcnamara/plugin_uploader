@@ -2,19 +2,26 @@ package dev.bmac.gradle.intellij.repo;
 
 import dev.bmac.gradle.intellij.PluginUploader;
 import okhttp3.*;
-import org.gradle.internal.impldep.org.apache.http.client.methods.RequestBuilder;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
 
-public class RestRepo extends RepoType {
+public class RestRepo extends Repo {
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
-    private final PluginUploader.UploadMethod uploadMethod;
-    public RestRepo(String baseRepoPath, String authentication, PluginUploader.UploadMethod uploadMethod) {
+    private final String method;
+    public RestRepo(String baseRepoPath, String authentication, PluginUploader.RepoType repoType) {
         super(baseRepoPath, authentication);
-        assert uploadMethod == PluginUploader.UploadMethod.POST || uploadMethod == PluginUploader.UploadMethod.PUT : "Only post and put allowed";
-        this.uploadMethod = uploadMethod;
+        switch (repoType) {
+            case REST_POST:
+                method = "POST";
+                break;
+            case REST_PUT:
+                method = "PUT";
+                break;
+            default:
+                throw new RuntimeException("Only post and put allowed");
+        }
     }
 
     @Override
@@ -50,7 +57,7 @@ public class RestRepo extends RepoType {
         RequestBody requestBody = RequestBody.create(file, MediaType.parse(mediaType));
         Request.Builder requestBuilder = new Request.Builder()
                 .url(baseRepoPath + "/" + relativePath)
-                .method(uploadMethod.name(), requestBody);
+                .method(method, requestBody);
         if (authentication != null) {
             requestBuilder.addHeader("Authorization", authentication);
         }

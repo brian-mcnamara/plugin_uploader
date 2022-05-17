@@ -1,27 +1,14 @@
 package dev.bmac.gradle.intellij;
 
-import com.github.rholder.retry.Attempt;
-import com.github.rholder.retry.RetryException;
-import com.github.rholder.retry.RetryListener;
-import com.github.rholder.retry.Retryer;
-import com.github.rholder.retry.RetryerBuilder;
-import com.github.rholder.retry.StopStrategies;
-import com.github.rholder.retry.WaitStrategies;
-import com.google.common.base.Charsets;
+import com.github.rholder.retry.*;
 import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
-import dev.bmac.gradle.intellij.repo.RepoType;
+import dev.bmac.gradle.intellij.repo.Repo;
 import dev.bmac.gradle.intellij.repo.RestRepo;
 import dev.bmac.gradle.intellij.repo.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -31,8 +18,6 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.DateFormat;
@@ -71,17 +56,17 @@ public class PluginUploader {
     private final Boolean updatePluginXml;
     private final String sinceBuild;
     private final String untilBuild;
-    private final UploadMethod uploadMethod;
+    private final RepoType repoType;
 
     private final boolean mutableRelease = Boolean.parseBoolean(System.getProperty(MUTABLE_PROPERTY, "false"));
-    private final RepoType repoType;
+    private final Repo repo;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
                           @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
                           @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
                           @NotNull String version, String authentication, String description, String changeNotes,
                           @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
-                          @NotNull UploadMethod uploadMethod) throws Exception {
+                          @NotNull RepoType repoType) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
@@ -99,7 +84,7 @@ public class PluginUploader {
         this.updatePluginXml = updatePluginXml;
         this.sinceBuild = sinceBuild;
         this.untilBuild = untilBuild;
-        this.uploadMethod = uploadMethod;
+        this.repoType = repoType;
 
         JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
@@ -109,9 +94,12 @@ public class PluginUploader {
 
         unmarshaller = contextObj.createUnmarshaller();
 
-        this.repoType = getRepoType();
+        this.repo = getRepoType();
     }
 
+    /**
+     * Main execution
+     */
     void execute() {
         if (url == null || pluginName == null ||
                 file == null || pluginId == null || version == null) {
@@ -126,9 +114,9 @@ public class PluginUploader {
             try {
                 getPluginsThrowIfOverwrite();
             } catch (FatalException e) {
-                throw new GradleException(e.getMessage());
+                throw new GradleException(e.getMessage(), e);
             }
-            postPlugin();
+            uploadPlugin();
         } else {
             final AtomicReference<Throwable> firstException = new AtomicReference<>();
             Retryer<Void> retryer = RetryerBuilder.<Void>newBuilder()
@@ -159,19 +147,25 @@ public class PluginUploader {
         }
     }
 
+    /**
+     * Creates a lock, grabs the current updatePlugins.xml, ensures there is not a version conflict,
+     * uploads the plugin file, uploads the updated updatePlugins.xml and deletes the lock at the end
+     * @throws RetryableException
+     * @throws FatalException
+     */
     void postPluginAndUpdateXml() throws RetryableException, FatalException {
-        String lock = setLockThrows();
+        String lock = uploadLockThrows();
 
         try {
             PluginsElement plugins = getPluginsThrowIfOverwrite();
 
-            postPlugin();
+            uploadPlugin();
 
             PluginElement plugin = new PluginElement(pluginId, version, description, changeNotes, pluginName,
                     sinceBuild, untilBuild, file, absoluteDownloadUrls ? url : ".");
             PluginUpdatesUtil.updateOrAdd(plugin, plugins.getPlugins(), logger);
 
-            postUpdates(plugins);
+            uploadUpdates(plugins);
         } finally {
             if (lock != null) {
                 if (lock.equals(getLock())) {
@@ -182,7 +176,7 @@ public class PluginUploader {
                             .build();
                     try {
                         retryer.call(() -> {
-                            clearLock();
+                            deleteLock();
                             return null;
                         });
                     } catch (ExecutionException | RetryException e) {
@@ -195,17 +189,25 @@ public class PluginUploader {
         }
     }
 
-    void postPlugin() {
+    /**
+     * Uploads the plugin file
+     */
+    void uploadPlugin() {
         String pluginEndpoint = pluginName + "/" + file.getName();
 
         try {
-            repoType.upload(pluginEndpoint, file, "application/zip");
+            repo.upload(pluginEndpoint, file, "application/zip");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    void postUpdates(PluginsElement updates) {
+    /**
+     * Uploads the updatePlugins.xml file adding a comment on top to indicate the time, this gradle plugins version,
+     * and plugin used to update the file
+     * @param updates The updatePlugins.xml POJO to marshal
+     */
+    void uploadUpdates(PluginsElement updates) {
         try {
             File file = File.createTempFile("updatePlugins", null);
             file.deleteOnExit();
@@ -230,15 +232,20 @@ public class PluginUploader {
 
             String fileName = updateFile;
 
-            repoType.upload(fileName, file, "application/xml");
+            repo.upload(fileName, file, "application/xml");
         } catch (IOException | JAXBException e) {
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * Grabs the latest updatePlugin.xml from the repo and unmarshaling it.
+     * Returns an empty POJO if the file does not exist in the repo
+     * @return The unmarshaled file from the repo or an empty one if it does not exist
+     */
     PluginsElement getUpdates() {
         try {
-            return repoType.get(updateFile, update -> {
+            return repo.get(updateFile, update -> {
                 if (update.exists()) {
                     try {
                         return (PluginsElement) unmarshaller.unmarshal(update.getInputStream());
@@ -255,10 +262,14 @@ public class PluginUploader {
         }
     }
 
+    /**
+     * Grabs the lock file from the repo and returns the contents
+     * @return The locks content or null if it does not exist.
+     */
     @Nullable
     String getLock() {
         try {
-            return repoType.get(updateFile + LOCK_FILE_EXTENSION, l -> {
+            return repo.get(updateFile + LOCK_FILE_EXTENSION, l -> {
                 if (l.exists()) {
                     ByteSource bs = new ByteSource() {
                         @Override
@@ -292,7 +303,7 @@ public class PluginUploader {
             try (FileOutputStream fos = new FileOutputStream(lockFile)) {
                 fos.write(lockValue.getBytes(StandardCharsets.UTF_8));
             }
-            repoType.upload(updateFile + LOCK_FILE_EXTENSION, lockFile, "text/plain");
+            repo.upload(updateFile + LOCK_FILE_EXTENSION, lockFile, "text/plain");
         } catch (IOException e) {
             logger.error("Failed to upload lock file which will cause this process to fail when we read back the lock", e);
         } finally {
@@ -302,19 +313,19 @@ public class PluginUploader {
         }
     }
 
-    void clearLock() throws IOException {
-        try {
-            repoType.delete(updateFile + LOCK_FILE_EXTENSION);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to parse the host", e);
-        }
+    /**
+     * Deletes the lock on the server
+     * @throws IOException
+     */
+    void deleteLock() throws IOException {
+        repo.delete(updateFile + LOCK_FILE_EXTENSION);
     }
 
     /**
-     * Ensure the lock does not exist, throwing if it exists, and set the lock
+     * Ensure the lock does not exist, throwing if it exists, and sets the lock by uploading the lock file to the repo
      * @return the lock key
      */
-    String setLockThrows() throws RetryableException {
+    String uploadLockThrows() throws RetryableException {
         String lock = getLock();
         if (lock != null) {
             throw new RetryableException("Lock exists on host. Can not proceed until lock file is cleared." +
@@ -348,23 +359,19 @@ public class PluginUploader {
         return plugins;
     }
 
-    String getUrl() {
-        return url;
-    }
-
     protected String getLockId() {
         return UUID.randomUUID().toString();
     }
 
-    protected RepoType getRepoType() {
-        switch (uploadMethod) {
-            case POST:
-            case PUT:
-                return new RestRepo(this.url, authentication, uploadMethod);
+    protected Repo getRepoType() {
+        switch (repoType) {
+            case REST_POST:
+            case REST_PUT:
+                return new RestRepo(this.url, authentication, repoType);
             case S3:
                 return new S3Repo(this.url, authentication);
             default:
-                throw new IllegalStateException("Upload method not implemented for " + uploadMethod.name());
+                throw new IllegalStateException("Upload method not implemented for " + repoType.name());
         }
     }
 
@@ -381,10 +388,19 @@ public class PluginUploader {
         return UNKNOWN_VERSION;
     }
 
+    public enum RepoType {
+        REST_POST,
+        REST_PUT,
+        S3
+    }
+
+    /**
+     * @deprecated Migrated to using RepoType
+     */
+    @Deprecated
     public enum UploadMethod {
         POST,
-        PUT,
-        S3
+        PUT;
     }
 
     private static class FatalException extends Exception {

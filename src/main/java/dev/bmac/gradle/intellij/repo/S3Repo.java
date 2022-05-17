@@ -1,34 +1,24 @@
 package dev.bmac.gradle.intellij.repo;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
-import org.apache.http.HttpHost;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.protocol.HttpContext;
 import org.jetbrains.annotations.TestOnly;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.URI;
-import java.net.URL;
 import java.util.function.Function;
 
 /**
  * https://bucket-name.s3.Region.amazonaws.com/key-name
  */
-public class S3Repo extends RepoType {
+public class S3Repo extends Repo {
 
     public static final String BUCKET_OVERRIDE = "dev.bmac.pluginUploader.s3.bucket";
     public static final String HOST_OVERRIDE = "dev.bmac.pluginUploader.s3.host";

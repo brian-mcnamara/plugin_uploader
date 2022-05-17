@@ -387,7 +387,7 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testUploadWithPutMethod() throws Exception {
-        builder.setUploadMethod(PluginUploader.UploadMethod.PUT);
+        builder.setRepoType(PluginUploader.RepoType.REST_PUT);
 
         enqueueResponses();
 

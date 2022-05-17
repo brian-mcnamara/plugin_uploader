@@ -1,17 +1,16 @@
 package dev.bmac.gradle.intellij.repo;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Function;
 
-public abstract class RepoType {
+public abstract class Repo {
 
     final String baseRepoPath;
     final String authentication;
 
-    public RepoType(String baseRepoPath, String authentication) {
+    public Repo(String baseRepoPath, String authentication) {
         this.baseRepoPath = baseRepoPath;
         this.authentication = authentication;
     }

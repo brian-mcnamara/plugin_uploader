@@ -2,10 +2,12 @@ package dev.bmac.gradle.intellij;
 
 import com.adobe.testing.s3mock.junit4.S3MockRule;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.S3Object;
 import dev.bmac.gradle.intellij.repo.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import okhttp3.mockwebserver.MockWebServer;
+import org.apache.commons.io.IOUtils;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.junit.Before;
@@ -19,6 +21,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.Assert.*;
 
 public class S3PublishPluginTest {
 
@@ -78,6 +83,12 @@ public class S3PublishPluginTest {
         builder.setRepoType(new S3Repo("https://localhost/plugins", "todo", BUCKET_NAME, "us-west-2", client));
         builder.build(LOCK_ID).execute();
 
-        client.getObject(BUCKET_NAME, "updatePlugins.xml");
+        S3Object updateObject = client.getObject(BUCKET_NAME, "plugins/updatePlugins.xml");
+        String updatePlugin = IOUtils.toString(updateObject.getObjectContent(), StandardCharsets.UTF_8);
+        assertEquals(updatePluginExpected, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
+
+        assertTrue(client.doesObjectExist(BUCKET_NAME, "plugins/" + PLUGIN_NAME + "/" + testFile.getName()));
+
+        assertFalse(client.doesObjectExist(BUCKET_NAME, "plugins/updatePlugins.xml.lock"));
     }
 }
