@@ -81,7 +81,7 @@ public class S3PublishPluginTest {
         marshaller.marshal(updates, writer);
         String updatePluginExpected = baos.toString();
 
-        builder.setRepoType(PluginUploader.RepoType.S3).setAuthentication("foo:bar").build(LOCK_ID).execute();
+        builder.setRepoType(PluginUploader.RepoType.S3).build(LOCK_ID).execute();
 
         S3Object updateObject = client.getObject(BUCKET_NAME, "plugins/updatePlugins.xml");
         String updatePlugin = IOUtils.toString(updateObject.getObjectContent(), StandardCharsets.UTF_8);

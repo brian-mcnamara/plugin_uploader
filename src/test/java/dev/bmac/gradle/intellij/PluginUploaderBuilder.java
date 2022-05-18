@@ -1,6 +1,6 @@
 package dev.bmac.gradle.intellij;
 
-import dev.bmac.gradle.intellij.repo.Repo;
+import dev.bmac.gradle.intellij.repos.Repo;
 import org.gradle.api.logging.Logger;
 
 import java.io.File;

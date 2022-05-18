@@ -1,8 +1,7 @@
-package dev.bmac.gradle.intellij.repo;
+package dev.bmac.gradle.intellij.repos;
 
 import dev.bmac.gradle.intellij.PluginUploader;
 import okhttp3.*;
-import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,8 +13,8 @@ import java.util.function.Function;
 public class RestRepo extends Repo {
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
     private final String method;
-    public RestRepo(String baseRepoPath, String authentication, Logger logger, PluginUploader.RepoType repoType) {
-        super(baseRepoPath, authentication, logger);
+    public RestRepo(String baseRepoPath, String authentication, PluginUploader.RepoType repoType) {
+        super(baseRepoPath, authentication);
         switch (repoType) {
             case REST_POST:
                 method = "POST";
@@ -41,7 +40,6 @@ public class RestRepo extends Repo {
         try (Response response = CLIENT.newCall(requestBuilder.build()).execute()) {
             RepoObject object;
             if (response.code() == 404) {
-                //logger.info("No " + updateFile + " found. Creating new file.");
                 object = new RepoObject(false, null);
             } else if (response.isSuccessful()) {
                 ResponseBody body = response.body();

@@ -477,7 +477,7 @@ public class IntellijPublishPluginTest {
         builder.setUntilBuild("1.1");
         builder.setSinceBuild("1.0");
         builder.setVersion("0.1");
-        System.setProperty("dev.bmac.pluginUploader.mutableRelease", "true");
+        System.setProperty(PluginUploader.RELEASE_CHECK_PROPERTY, "true");
 
         try {
             String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());

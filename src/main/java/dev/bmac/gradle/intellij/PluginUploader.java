@@ -4,9 +4,9 @@ import com.github.rholder.retry.*;
 import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
-import dev.bmac.gradle.intellij.repo.Repo;
-import dev.bmac.gradle.intellij.repo.RestRepo;
-import dev.bmac.gradle.intellij.repo.S3Repo;
+import dev.bmac.gradle.intellij.repos.Repo;
+import dev.bmac.gradle.intellij.repos.RestRepo;
+import dev.bmac.gradle.intellij.repos.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.gradle.api.GradleException;
@@ -366,9 +366,9 @@ public class PluginUploader {
         switch (repoType) {
             case REST_POST:
             case REST_PUT:
-                return new RestRepo(url, authentication, logger, repoType);
+                return new RestRepo(url, authentication, repoType);
             case S3:
-                return new S3Repo(url, authentication, logger);
+                return new S3Repo(url, authentication);
             default:
                 throw new IllegalStateException("Upload method not implemented for " + repoType.name());
         }

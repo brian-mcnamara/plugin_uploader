@@ -1,6 +1,4 @@
-package dev.bmac.gradle.intellij.repo;
-
-import org.gradle.api.logging.Logger;
+package dev.bmac.gradle.intellij.repos;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,12 +12,10 @@ public abstract class Repo {
 
     final String baseRepoPath;
     final String authentication;
-    final Logger logger;
 
-    public Repo(String baseRepoPath, String authentication, Logger logger) {
+    public Repo(String baseRepoPath, String authentication) {
         this.baseRepoPath = baseRepoPath;
         this.authentication = authentication;
-        this.logger = logger;
     }
 
     /**
