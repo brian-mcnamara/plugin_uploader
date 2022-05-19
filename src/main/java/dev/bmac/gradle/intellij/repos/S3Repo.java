@@ -69,10 +69,10 @@ public class S3Repo extends Repo {
     public <T> T get(String relativePath, Function<RepoObject, T> converter) throws IOException {
         try {
             S3Object object = client.getObject(bucketName, baseRepoPath + relativePath);
-            return converter.apply(new RepoObject(true, object.getObjectContent()));
+            return converter.apply(RepoObject.of(object.getObjectContent()));
         } catch (AmazonS3Exception e) {
             if (e.getStatusCode() == 404) {
-                return converter.apply(new RepoObject(false, null));
+                return converter.apply(RepoObject.empty());
             }
             throw new IOException("Failed to get object from s3", e);
         }

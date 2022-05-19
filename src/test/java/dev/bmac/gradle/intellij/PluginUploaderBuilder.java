@@ -108,6 +108,10 @@ public class PluginUploaderBuilder {
         return this;
     }
 
+    public void setRepo(Repo repo) {
+        this.repo = repo;
+    }
+
     public String getUrl() {
         return url;
     }

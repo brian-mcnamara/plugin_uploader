@@ -7,55 +7,25 @@ import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.*;
 
-public class S3PublishPluginTest {
+public class S3PublishPluginTest extends BasePluginUploaderTest {
 
     @ClassRule
     public static final S3MockRule S3_MOCK_RULE = S3MockRule.builder().withSecureConnection(false).silent().build();
-
-    private static final String FILE_CONTENTS = "testFileContents";
     private static final String BUCKET_NAME = "test-bucket";
-    private static final String LOCK_ID = "testLock";
-    private static final String PLUGIN_ID = "pluginId";
-    private static final String PLUGIN_NAME = "MyPlugin";
-    private static final String VERSION = "1.0";
-
-    private PluginUploaderBuilder builder;
-    private final Marshaller marshaller;
-    private final File testFile;
     private final AmazonS3 client = S3_MOCK_RULE.createS3Client();
 
-    private final Logger logger;
-
     public S3PublishPluginTest() throws Exception {
-        logger = Logging.getLogger(S3PublishPluginTest.class);
-        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
-
-        marshaller = contextObj.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
-
-        testFile = File.createTempFile(getClass().getSimpleName(), ".zip");
-        testFile.deleteOnExit();
-
-        FileWriter fw = new FileWriter(testFile);
-        fw.append(FILE_CONTENTS);
-        fw.close();
+        super();
     }
 
     @Before

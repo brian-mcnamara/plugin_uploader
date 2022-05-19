@@ -40,13 +40,13 @@ public class RestRepo extends Repo {
         try (Response response = CLIENT.newCall(requestBuilder.build()).execute()) {
             RepoObject object;
             if (response.code() == 404) {
-                object = new RepoObject(false, null);
+                object = RepoObject.empty();
             } else if (response.isSuccessful()) {
                 ResponseBody body = response.body();
                 if (body == null) {
                     throw new RuntimeException("Body was null for " + relativePath);
                 }
-                object = new RepoObject(true, body.byteStream());
+                object = RepoObject.of(body.byteStream());
             } else {
                 throw new RuntimeException("Received an unknown status code while retrieving " + relativePath);
             }

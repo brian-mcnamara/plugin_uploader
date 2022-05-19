@@ -48,11 +48,13 @@ public abstract class Repo {
      * Small POJO to contain abstracted information from get requests
      */
     public static class RepoObject {
+
+        private static final RepoObject EMPTY = new RepoObject(false, null);
         private final boolean exists;
         private final InputStream inputStream;
 
 
-        public RepoObject(boolean exists, InputStream inputStream) {
+        private RepoObject(boolean exists, InputStream inputStream) {
             this.exists = exists;
             this.inputStream = inputStream;
         }
@@ -63,6 +65,14 @@ public abstract class Repo {
 
         public InputStream getInputStream() {
             return inputStream;
+        }
+
+        public static RepoObject empty() {
+            return EMPTY;
+        }
+
+        public static RepoObject of(InputStream is) {
+            return new RepoObject(true, is);
         }
     }
 }
