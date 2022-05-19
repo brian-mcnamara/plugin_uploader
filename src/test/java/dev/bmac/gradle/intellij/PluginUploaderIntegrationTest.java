@@ -79,7 +79,7 @@ public class PluginUploaderIntegrationTest {
         List<RecordedRequest> requests = handler.requests;
         assertEquals("Basic pass", requests.get(1).auth);
 
-        RecordedRequest updateXml = requests.get(5);
+        RecordedRequest updateXml = requests.get(7);
         assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, updateXml.path);
         assertTrue(updateXml.body.contains("changenotes"));
         assertTrue(updateXml.body.contains("description"));
@@ -143,7 +143,7 @@ public class PluginUploaderIntegrationTest {
                 } else {
                     exchange.sendResponseHeaders(404, 0);
                 }
-            } else if (exchange.getRequestURI().getPath().endsWith(".zip")) {
+            } else if (exchange.getRequestURI().getPath().endsWith(".zip") || exchange.getRequestURI().getPath().endsWith(".json")) {
                 exchange.sendResponseHeaders(201, 0);
             } else if (exchange.getRequestURI().getPath().endsWith(UploadPluginTask.UPDATE_PLUGINS_FILENAME)) {
                 if (exchange.getRequestMethod().equalsIgnoreCase("get")) {

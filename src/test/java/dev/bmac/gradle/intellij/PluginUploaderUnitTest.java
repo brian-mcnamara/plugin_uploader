@@ -23,9 +23,12 @@ public class PluginUploaderUnitTest extends BasePluginUploaderTest {
     }
 
     @Before
+    @Override
     public void setup() throws Exception {
+        super.setup();
         mockRepo = mock(MockRepo.class);
-        builder = new PluginUploaderBuilder("https://repo.example.com/intellij", PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
+        builder = new PluginUploaderBuilder("https://repo.example.com/intellij", PLUGIN_NAME, testFile,
+                blockmapFile, hashFile, PLUGIN_ID, VERSION, logger);
         builder.setRepo(mockRepo);
     }
 
@@ -54,6 +57,8 @@ public class PluginUploaderUnitTest extends BasePluginUploaderTest {
         inOrder.verify(mockRepo).get(eq(LOCK_FILE), any());
         inOrder.verify(mockRepo).get(eq(UploadPluginTask.UPDATE_PLUGINS_FILENAME), any());
         inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + testFile.getName()), eq(testFile), eq("application/zip"));
+        inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + blockmapFile.getName()), eq(blockmapFile), eq("application/zip"));
+        inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + hashFile.getName()), eq(hashFile), eq("application/json"));
         inOrder.verify(mockRepo).upload(eq(UploadPluginTask.UPDATE_PLUGINS_FILENAME), any(), eq("application/xml"));
         inOrder.verify(mockRepo).get(eq(LOCK_FILE), any());
         inOrder.verify(mockRepo).delete(eq(LOCK_FILE));
@@ -73,6 +78,8 @@ public class PluginUploaderUnitTest extends BasePluginUploaderTest {
 
         inOrder.verify(mockRepo).get(eq(UploadPluginTask.UPDATE_PLUGINS_FILENAME), any());
         inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + testFile.getName()), eq(testFile), eq("application/zip"));
+        inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + blockmapFile.getName()), eq(blockmapFile), eq("application/zip"));
+        inOrder.verify(mockRepo).upload(eq(PLUGIN_NAME + "/" + hashFile.getName()), eq(hashFile), eq("application/json"));
         inOrder.verifyNoMoreInteractions();
     }
 

@@ -23,11 +23,16 @@ public class PluginUploaderBuilder {
     private PluginUploader.RepoType repoType = PluginUploader.RepoType.REST_POST;
     private Logger logger;
     private Repo repo = null;
+    private File blockmapFile;
+    private File hashFile;
 
-    public PluginUploaderBuilder(String url, String pluginName, File file, String pluginId, String version, Logger logger) {
+    public PluginUploaderBuilder(String url, String pluginName, File file, File blockmap, File hash,
+                                 String pluginId, String version, Logger logger) {
         this.url = url;
         this.pluginName = pluginName;
         this.file = file;
+        this.blockmapFile = blockmap;
+        this.hashFile = hash;
         this.pluginId = pluginId;
         this.version = version;
         this.logger = logger;
@@ -175,7 +180,7 @@ public class PluginUploaderBuilder {
     public PluginUploader build(String lockId) throws Exception {
         return new PluginUploader(1, 2, logger, url, absoluteDownloadUrls, pluginName, file,
                 updateFile, pluginId, version, authentication, description, changeNotes, updatePluginXml,
-                sinceBuild, untilBuild, repoType) {
+                sinceBuild, untilBuild, repoType, blockmapFile, hashFile) {
             @Override
             protected String getLockId() {
                 return lockId;

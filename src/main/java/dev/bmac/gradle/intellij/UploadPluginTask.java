@@ -5,10 +5,8 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.*;
 
 import javax.inject.Inject;
 
@@ -116,6 +114,8 @@ public class UploadPluginTask extends ConventionTask {
             }
         }
 
+        GenerateBlockMapTask bmt = getProject().getTasks()
+                .named(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class).get();
 
         new PluginUploader(1000, 5, logger,
                 url.get(),
@@ -131,7 +131,9 @@ public class UploadPluginTask extends ConventionTask {
                 updatePluginXml.getOrElse(true),
                 sinceBuild.getOrNull(),
                 untilBuild.getOrNull(),
-                rt).execute();
+                rt,
+                bmt.blockmapFile.getAsFile().get(),
+                bmt.blockmapHashFile.getAsFile().get()).execute();
     }
 
     public Property<String> getUrl() {

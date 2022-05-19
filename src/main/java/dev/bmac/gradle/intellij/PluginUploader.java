@@ -3,6 +3,7 @@ package dev.bmac.gradle.intellij;
 import com.github.rholder.retry.*;
 import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
+import com.jetbrains.plugin.blockmap.core.BlockMap;
 import com.sun.istack.Nullable;
 import dev.bmac.gradle.intellij.repos.Repo;
 import dev.bmac.gradle.intellij.repos.RestRepo;
@@ -29,8 +30,11 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.ZipFile;
 
 public class PluginUploader {
+
+    public static final String TASK_NAME = "uploadPlugin";
 
     //System property to allow skipping the check which prevents replacing a released release.
     public static final String RELEASE_CHECK_PROPERTY = "dev.bmac.pluginUploader.skipReleaseCheck";
@@ -58,6 +62,8 @@ public class PluginUploader {
     private final String sinceBuild;
     private final String untilBuild;
     private final RepoType repoType;
+    private final File blockmapFile;
+    private final File hashFile;
 
     private final boolean skipReleaseCheck = Boolean.parseBoolean(System.getProperty(RELEASE_CHECK_PROPERTY, "false"));
     private final Repo repo;
@@ -67,7 +73,7 @@ public class PluginUploader {
                           @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
                           @NotNull String version, String authentication, String description, String changeNotes,
                           @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
-                          @NotNull RepoType repoType) throws Exception {
+                          @NotNull RepoType repoType, File blockmapFile, File hashFile) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
@@ -86,6 +92,8 @@ public class PluginUploader {
         this.sinceBuild = sinceBuild;
         this.untilBuild = untilBuild;
         this.repoType = repoType;
+        this.blockmapFile = blockmapFile;
+        this.hashFile = hashFile;
 
         JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
@@ -194,10 +202,10 @@ public class PluginUploader {
      * Uploads the plugin file
      */
     void uploadPlugin() {
-        String pluginEndpoint = pluginName + "/" + file.getName();
-
         try {
-            repo.upload(pluginEndpoint, file, "application/zip");
+            repo.upload(pluginName + "/" + file.getName(), file, "application/zip");
+            repo.upload(pluginName + "/" + blockmapFile.getName(), blockmapFile, "application/zip");
+            repo.upload(pluginName + "/" + hashFile.getName(), hashFile, "application/json");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

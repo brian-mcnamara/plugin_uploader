@@ -3,6 +3,9 @@ package dev.bmac.gradle.intellij;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -10,6 +13,9 @@ import java.io.File;
 import java.io.FileWriter;
 
 public abstract class BasePluginUploaderTest {
+
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     protected static final String LOCK_FILE = UploadPluginTask.UPDATE_PLUGINS_FILENAME + PluginUploader.LOCK_FILE_EXTENSION;
 
@@ -21,23 +27,29 @@ public abstract class BasePluginUploaderTest {
 
     protected PluginUploaderBuilder builder;
     protected final Marshaller marshaller;
-    protected final File testFile;
+    protected File testFile;
+    protected File blockmapFile;
+    protected File hashFile;
     protected final Logger logger;
 
     BasePluginUploaderTest() throws Exception {
         logger = Logging.getLogger(IntellijPublishPluginTest.class);
-
         JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
-
         marshaller = contextObj.createMarshaller();
         marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+    }
 
-        testFile = File.createTempFile(getClass().getSimpleName(), ".zip");
-        testFile.deleteOnExit();
+    @Before
+    public void setup() throws Exception {
+        String filename = PLUGIN_ID + "-" + VERSION + ".zip";
+        testFile = temporaryFolder.newFile(filename);
 
         FileWriter fw = new FileWriter(testFile);
         fw.append(FILE_CONTENTS);
         fw.close();
+
+        blockmapFile = temporaryFolder.newFile(filename + ".blockmap.zip");
+        hashFile = temporaryFolder.newFile(filename + ".hash.json");
     }
 }

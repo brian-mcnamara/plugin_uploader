@@ -29,14 +29,16 @@ public class S3PublishPluginTest extends BasePluginUploaderTest {
     }
 
     @Before
+    @Override
     public void setup() throws Exception {
-
+        super.setup();
         client.createBucket(BUCKET_NAME);
         String endpoint = S3_MOCK_RULE.getServiceEndpoint();
         URIBuilder uriBuilder = new URIBuilder(endpoint);
         uriBuilder.setUserInfo(BUCKET_NAME)
                   .setPath("/plugins");
-        builder = new PluginUploaderBuilder(uriBuilder.toString(), PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
+        builder = new PluginUploaderBuilder(uriBuilder.toString(), PLUGIN_NAME, testFile, blockmapFile, hashFile,
+                PLUGIN_ID, VERSION, logger);
     }
 
     @Test
