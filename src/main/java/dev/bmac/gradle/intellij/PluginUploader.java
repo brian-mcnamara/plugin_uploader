@@ -3,7 +3,6 @@ package dev.bmac.gradle.intellij;
 import com.github.rholder.retry.*;
 import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
-import com.jetbrains.plugin.blockmap.core.BlockMap;
 import com.sun.istack.Nullable;
 import dev.bmac.gradle.intellij.repos.Repo;
 import dev.bmac.gradle.intellij.repos.RestRepo;
@@ -30,8 +29,11 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.ZipFile;
 
+/**
+ * Business logic to manage and upload files related to intellij plugins, such as updatePlugins.xml, plugin archive,
+ * blockmap archive and hash file.
+ */
 public class PluginUploader {
 
     public static final String TASK_NAME = "uploadPlugin";
@@ -361,7 +363,7 @@ public class PluginUploader {
         //Prevent replacing published versions.
         if (!skipReleaseCheck && pluginVersionExistsInRepo) {
             throw new FatalException("Plugin '" + pluginId + "' with version " + version + " already published to repository." +
-                    " Because `allowOverwrite` is set to false (default), this publishing attempt will be aborted.");
+                    " Publish attempt aborted to prevent overwriting the release. See the readme of this plugin for more info.");
         }
         return plugins;
     }

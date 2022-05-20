@@ -16,6 +16,10 @@ import java.io.OutputStreamWriter;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Gradle task to generate a blockmap and hash file to be uploaded in the uploadPlugin task.
+ * IntelliJ uses this for incremental plugin download.
+ */
 @CacheableTask
 public class GenerateBlockMapTask extends ConventionTask {
 
