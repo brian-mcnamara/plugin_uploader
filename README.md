@@ -1,6 +1,6 @@
 # IntelliJ plugin uploader
 
-A gradle plugin to take care of uploading an IntelliJ plugin and updating updatePlugins.xml hosted on a private repository,
+A gradle plugin to automate uploading an IntelliJ plugin and updating updatePlugins.xml hosted on a private repository,
 including S3-compatible stores.
 
 ## Usage
