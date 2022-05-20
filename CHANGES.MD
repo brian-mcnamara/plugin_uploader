@@ -2,7 +2,7 @@
 
 ## 1.3.0
 ### Added
-* Treat versions in updatePlugins.xml as immutable. Without setting mutableRelease property to true, uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
+* Treat versions in updatePlugins.xml as immutable. uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
 * Added S3-compatible repository support
 * Added `generateBlockMap` task adding BlockMap and hash generation for incremental plugin updates from the IDE
 ### Changed
