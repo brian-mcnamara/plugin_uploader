@@ -1,6 +1,9 @@
 package dev.bmac.gradle.intellij;
 
 import com.google.common.collect.Lists;
+import com.google.gson.Gson;
+import com.jetbrains.plugin.blockmap.core.BlockMap;
+import com.jetbrains.plugin.blockmap.core.FileHash;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -9,15 +12,18 @@ import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +33,9 @@ import static org.junit.Assert.assertTrue;
  */
 public class PluginUploaderIntegrationTest {
 
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     private HttpServer httpServer;
     private Handler handler;
     File testFile;
@@ -35,11 +44,13 @@ public class PluginUploaderIntegrationTest {
 
     @Before
     public void init() throws Exception {
-        testFile = File.createTempFile(getClass().getSimpleName(), ".zip");
-        testFile.deleteOnExit();
-        projectDir = Files.createTempDirectory("test").toFile();
+        projectDir = temporaryFolder.newFolder();
+        testFile = new File(projectDir, "plugin.zip");
         buildFile = new File(projectDir, "build.gradle");
 
+        try (FileOutputStream fos = new FileOutputStream(testFile)) {
+            fos.write("testContent".getBytes(StandardCharsets.UTF_8));
+        }
 
         handler = new Handler();
         httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -75,6 +86,23 @@ public class PluginUploaderIntegrationTest {
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput().withArguments("--stacktrace", "uploadPlugin").build();
+
+        File blockmapFile = new File(projectDir, testFile.getName() + GenerateBlockMapTask.BLOCKMAP_FILE_SUFFIX);
+        File hashFile = new File(projectDir, testFile.getName() + GenerateBlockMapTask.HASH_FILE_SUFFIX);
+        assertTrue(blockmapFile.exists());
+        assertTrue(hashFile.exists());
+
+        Gson gson = new Gson();
+        BlockMap bm;
+        try (ZipFile zf = new ZipFile(blockmapFile)) {
+            ZipEntry entry = zf.getEntry("blockmap.json");
+            bm = gson.fromJson(new InputStreamReader(zf.getInputStream(entry)), BlockMap.class);
+        }
+
+        FileHash fh = gson.fromJson(new FileReader(hashFile), FileHash.class);
+        assertEquals(1, bm.getChunks().size());
+        assertEquals("0dczqAQXRNbkt7mRtfON9Io3Z6zWdMnfIxySBogBpGA=", bm.getChunks().get(0).getHash());
+        assertEquals("0dczqAQXRNbkt7mRtfON9Io3Z6zWdMnfIxySBogBpGA=", fh.getHash());
 
         List<RecordedRequest> requests = handler.requests;
         assertEquals("Basic pass", requests.get(1).auth);
