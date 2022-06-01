@@ -1,6 +1,9 @@
 package dev.bmac.gradle.intellij;
 
 import com.google.common.collect.Lists;
+import com.google.gson.Gson;
+import com.jetbrains.plugin.blockmap.core.BlockMap;
+import com.jetbrains.plugin.blockmap.core.FileHash;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -9,15 +12,18 @@ import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +33,9 @@ import static org.junit.Assert.assertTrue;
  */
 public class PluginUploaderIntegrationTest {
 
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     private HttpServer httpServer;
     private Handler handler;
     File testFile;
@@ -35,11 +44,13 @@ public class PluginUploaderIntegrationTest {
 
     @Before
     public void init() throws Exception {
-        testFile = File.createTempFile(getClass().getSimpleName(), ".zip");
-        testFile.deleteOnExit();
-        projectDir = Files.createTempDirectory("test").toFile();
+        projectDir = temporaryFolder.newFolder();
+        testFile = new File(projectDir, "plugin.zip");
         buildFile = new File(projectDir, "build.gradle");
 
+        try (FileOutputStream fos = new FileOutputStream(testFile)) {
+            fos.write("testContent".getBytes(StandardCharsets.UTF_8));
+        }
 
         handler = new Handler();
         httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -63,7 +74,7 @@ public class PluginUploaderIntegrationTest {
                 "uploadPlugin {" +
                 "    url.set('http:/" + httpServer.getAddress().toString() + "')\n" +
                 "    pluginName.set('testPlugin')\n" +
-                "    file.set(file('" + testFile.getPath() + "'))\n" +
+                "    file.set(file('" + testFile.getPath().replace("\\", "/") + "'))\n" +
                 "    pluginId.set('testPlugin')\n" +
                 "    version.set('1.0.0')\n" +
                 "    pluginDescription.set('description')\n" +
@@ -76,10 +87,27 @@ public class PluginUploaderIntegrationTest {
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput().withArguments("--stacktrace", "uploadPlugin").build();
 
-        List<RecordedRequest> requests = handler.requests;
-        assertEquals("Basic pass", requests.get(0).auth);
+        File blockmapFile = new File(projectDir, testFile.getName() + GenerateBlockMapTask.BLOCKMAP_FILE_SUFFIX);
+        File hashFile = new File(projectDir, testFile.getName() + GenerateBlockMapTask.HASH_FILE_SUFFIX);
+        assertTrue(blockmapFile.exists());
+        assertTrue(hashFile.exists());
 
-        RecordedRequest updateXml = requests.get(5);
+        Gson gson = new Gson();
+        BlockMap bm;
+        try (ZipFile zf = new ZipFile(blockmapFile)) {
+            ZipEntry entry = zf.getEntry("blockmap.json");
+            bm = gson.fromJson(new InputStreamReader(zf.getInputStream(entry)), BlockMap.class);
+        }
+
+        FileHash fh = gson.fromJson(new FileReader(hashFile), FileHash.class);
+        assertEquals(1, bm.getChunks().size());
+        assertEquals("0dczqAQXRNbkt7mRtfON9Io3Z6zWdMnfIxySBogBpGA=", bm.getChunks().get(0).getHash());
+        assertEquals("0dczqAQXRNbkt7mRtfON9Io3Z6zWdMnfIxySBogBpGA=", fh.getHash());
+
+        List<RecordedRequest> requests = handler.requests;
+        assertEquals("Basic pass", requests.get(1).auth);
+
+        RecordedRequest updateXml = requests.get(7);
         assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, updateXml.path);
         assertTrue(updateXml.body.contains("changenotes"));
         assertTrue(updateXml.body.contains("description"));
@@ -96,7 +124,7 @@ public class PluginUploaderIntegrationTest {
                 "uploadPlugin {" +
                 //"    url.set('http:/" + httpServer.getAddress().toString() + "')\n" +
                 "    pluginName.set('testPlugin')\n" +
-                "    file.set(file('" + testFile.getPath() + "'))\n" +
+                "    file.set(file('" + testFile.getPath().replace("\\", "/") + "'))\n" +
                 "    pluginId.set('testPlugin')\n" +
                 "    version.set('1.0.0')\n" +
                 "}");
@@ -105,7 +133,7 @@ public class PluginUploaderIntegrationTest {
         BuildResult buildResult = GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput().withArguments("uploadPlugin").buildAndFail();
-        assertTrue(buildResult.getOutput().contains("No value has been specified for property 'url'"));
+        assertTrue(buildResult.getOutput().contains("This property isn't marked as optional and no value has been configured"));
     }
 
     public static class Handler implements HttpHandler {
@@ -143,7 +171,7 @@ public class PluginUploaderIntegrationTest {
                 } else {
                     exchange.sendResponseHeaders(404, 0);
                 }
-            } else if (exchange.getRequestURI().getPath().endsWith(".zip")) {
+            } else if (exchange.getRequestURI().getPath().endsWith(".zip") || exchange.getRequestURI().getPath().endsWith(".json")) {
                 exchange.sendResponseHeaders(201, 0);
             } else if (exchange.getRequestURI().getPath().endsWith(UploadPluginTask.UPDATE_PLUGINS_FILENAME)) {
                 if (exchange.getRequestMethod().equalsIgnoreCase("get")) {

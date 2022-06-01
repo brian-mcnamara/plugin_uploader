@@ -7,17 +7,11 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gradle.api.GradleException;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 
@@ -26,41 +20,21 @@ import static org.junit.Assert.*;
 /**
  * Created by brian.mcnamara on Jan 30 2020
  **/
-public class IntellijPublishPluginTest {
-    private static final String LOCK_ID = "testLock";
-    private static final String FILE_CONTENTS = "testFileContents";
-    private static final String PLUGIN_ID = "pluginId";
-    private static final String PLUGIN_NAME = "MyPlugin";
-    private static final String VERSION = "1.0";
-
+public class IntellijPublishPluginTest extends BasePluginUploaderTest {
     private MockWebServer webServer;
-    private PluginUploaderBuilder builder;
-    private final Marshaller marshaller;
-    private final File testFile;
-    private final Logger logger;
 
     public IntellijPublishPluginTest() throws Exception {
-        logger = Logging.getLogger(IntellijPublishPluginTest.class);
-
-        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
-
-        marshaller = contextObj.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
-
-        testFile = File.createTempFile(getClass().getSimpleName(), ".zip");
-        testFile.deleteOnExit();
-
-        FileWriter fw = new FileWriter(testFile);
-        fw.append(FILE_CONTENTS);
-        fw.close();
+        super();
     }
 
     @Before
+    @Override
     public void setup() throws Exception {
+        super.setup();
         webServer = new MockWebServer();
         webServer.start();
-        builder = new PluginUploaderBuilder(webServer.url("/").toString(), PLUGIN_NAME, testFile, PLUGIN_ID, VERSION, logger);
+        builder = new PluginUploaderBuilder(webServer.url("/").toString(), PLUGIN_NAME, testFile, blockmapFile,
+                hashFile, PLUGIN_ID, VERSION, logger);
     }
 
     @After
@@ -85,29 +59,40 @@ public class IntellijPublishPluginTest {
         builder.build(LOCK_ID).execute();
 
         RecordedRequest request = webServer.takeRequest();
+        assertEquals("/" + LOCK_FILE, request.getPath());
+        assertEquals("GET", request.getMethod());
+        assertNull(request.getHeader("authorization"));
+
+        request = webServer.takeRequest();
+        assertEquals("/" + LOCK_FILE, request.getPath());
+        assertEquals(LOCK_ID, request.getBody().readUtf8());
+        assertEquals("POST", request.getMethod());
+        assertNull(request.getHeader("authorization"));
+
+
+        request = webServer.takeRequest();
+        assertEquals("/" + LOCK_FILE, request.getPath());
+        assertEquals("GET", request.getMethod());
+
+        request = webServer.takeRequest();
+        assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
+        assertEquals("GET", request.getMethod());
+
+        request = webServer.takeRequest();
         assertEquals("/" + PLUGIN_NAME + "/" + testFile.getName(), request.getPath());
         assertEquals(FILE_CONTENTS, request.getBody().readUtf8());
         assertEquals("POST", request.getMethod());
         assertEquals("application/zip", request.getHeader("Content-Type"));
 
-        String lockFile = UploadPluginTask.UPDATE_PLUGINS_FILENAME + PluginUploader.LOCK_FILE_EXTENSION;
         request = webServer.takeRequest();
-        assertEquals("/" + lockFile, request.getPath());
-        assertEquals("GET", request.getMethod());
-
-        request = webServer.takeRequest();
-        assertEquals("/" + lockFile, request.getPath());
-        assertEquals(LOCK_ID, request.getBody().readUtf8());
+        assertEquals("/" + PLUGIN_NAME + "/" + blockmapFile.getName(), request.getPath());
         assertEquals("POST", request.getMethod());
+        assertEquals("application/zip", request.getHeader("Content-Type"));
 
         request = webServer.takeRequest();
-        assertEquals("/" + lockFile, request.getPath());
-        assertEquals("GET", request.getMethod());
-
-
-        request = webServer.takeRequest();
-        assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
-        assertEquals("GET", request.getMethod());
+        assertEquals("/" + PLUGIN_NAME + "/" + hashFile.getName(), request.getPath());
+        assertEquals("POST", request.getMethod());
+        assertEquals("application/json", request.getHeader("Content-Type"));
 
         request = webServer.takeRequest();
         assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
@@ -118,20 +103,56 @@ public class IntellijPublishPluginTest {
         assertEquals(updatePluginExpected, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
         assertEquals("POST", request.getMethod());
 
-
         request = webServer.takeRequest();
-        assertEquals("/" + lockFile, request.getPath());
+        assertEquals("/" + LOCK_FILE, request.getPath());
         assertEquals("GET", request.getMethod());
 
         request = webServer.takeRequest();
-        assertEquals("/" + lockFile, request.getPath());
+        assertEquals("/" + LOCK_FILE, request.getPath());
         assertEquals("DELETE", request.getMethod());
+        assertNull(request.getHeader("authorization"));
+    }
+
+    @Test
+    public void testPluginEndToEndWithAuth() throws Exception {
+        PluginElement pluginInstance = new PluginElement(PLUGIN_ID, VERSION,
+                null, null, PLUGIN_NAME, null, null, testFile, ".");
+        PluginsElement updates = new PluginsElement();
+        updates.getPlugins().add(pluginInstance);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        OutputStreamWriter writer = new OutputStreamWriter(baos);
+        marshaller.marshal(updates, writer);
+
+        enqueueResponses();
+
+        final String authValue = "basic test:pass";
+        builder.setAuthentication(authValue);
+        builder.build(LOCK_ID).execute();
+
+        //get lock
+        RecordedRequest request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
+
+        //post lock
+        request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
+
+        webServer.takeRequest(); //get lock
+        webServer.takeRequest(); //get update file
+        webServer.takeRequest(); //post plugin
+        webServer.takeRequest(); //post blockmap
+        webServer.takeRequest(); //post hash
+        webServer.takeRequest(); //post update file
+        webServer.takeRequest(); //get lock
+
+        //delete
+        request = webServer.takeRequest();
+        assertEquals(authValue, request.getHeader("authorization"));
     }
 
     @Test
     public void testPluginLockExists() throws Exception {
-        //Upload file
-        webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock second retry
@@ -147,8 +168,6 @@ public class IntellijPublishPluginTest {
 
     @Test
     public void testPluginLockChanged() throws Exception {
-        //Upload file
-        webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
         webServer.enqueue(new MockResponse().setResponseCode(404));
         //Set the lock
@@ -190,13 +209,23 @@ public class IntellijPublishPluginTest {
     @Test
     public void testOnlyPluginUploadIfWriteToUpdateXmlFalse() throws Exception {
         builder.setUpdatePluginXml(false);
+        //check update xml
+        webServer.enqueue(new MockResponse().setResponseCode(404));
         //Upload file
+        webServer.enqueue(new MockResponse().setResponseCode(201));
+        //Upload blockmap
+        webServer.enqueue(new MockResponse().setResponseCode(201));
+        //Upload hash
         webServer.enqueue(new MockResponse().setResponseCode(201));
 
         builder.build(LOCK_ID).execute();
 
-        assertEquals(1, webServer.getRequestCount());
+        assertEquals(4, webServer.getRequestCount());
         RecordedRequest request = webServer.takeRequest();
+        assertEquals("/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, request.getPath());
+        assertEquals("GET", request.getMethod());
+
+        request = webServer.takeRequest();
         assertEquals("/" + PLUGIN_NAME + "/" + testFile.getName(), request.getPath());
         assertEquals(FILE_CONTENTS, request.getBody().readUtf8());
         assertEquals("POST", request.getMethod());
@@ -212,14 +241,21 @@ public class IntellijPublishPluginTest {
 
         builder.build(LOCK_ID).execute();
 
-        webServer.takeRequest();
-        webServer.takeRequest();
-        webServer.takeRequest();
-        webServer.takeRequest();
+        webServer.takeRequest(); //Get lock
+        webServer.takeRequest(); //Set lock
+        webServer.takeRequest(); //Get lock
+        //Get update xml
         RecordedRequest recordedRequest = webServer.takeRequest();
 
         assertEquals("/" + newUpdateFile, recordedRequest.getPath());
         assertEquals("GET", recordedRequest.getMethod());
+
+        //Post Plugin
+        webServer.takeRequest();
+        //Post blockmap
+        webServer.takeRequest();
+        //Post hash
+        webServer.takeRequest();
 
         recordedRequest = webServer.takeRequest();
         assertEquals("/" + newUpdateFile, recordedRequest.getPath());
@@ -235,30 +271,45 @@ public class IntellijPublishPluginTest {
 
         builder.build(LOCK_ID).execute();
 
+        //Get lock
         RecordedRequest recordedRequest = webServer.takeRequest();
+        assertEquals("/somePath/" + LOCK_FILE, recordedRequest.getPath());
+
+        //Set lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("/somePath/" + LOCK_FILE, recordedRequest.getPath());
+
+        //Get lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("/somePath/" + LOCK_FILE, recordedRequest.getPath());
+
+        //Get update xml
+        recordedRequest = webServer.takeRequest();
+        assertEquals("/somePath/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
+
+        //Upload plugin
+        recordedRequest = webServer.takeRequest();
         assertEquals("/somePath/" + PLUGIN_NAME + "/" + testFile.getName(), recordedRequest.getPath());
 
-        String lockFile = UploadPluginTask.UPDATE_PLUGINS_FILENAME + PluginUploader.LOCK_FILE_EXTENSION;
+        //Upload blockmap
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
+        assertEquals("/somePath/" + PLUGIN_NAME + "/" + blockmapFile.getName(), recordedRequest.getPath());
 
+        //Upload hash
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
+        assertEquals("/somePath/" + PLUGIN_NAME + "/" + hashFile.getName(), recordedRequest.getPath());
 
-        recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
-
+        //Update xml
         recordedRequest = webServer.takeRequest();
         assertEquals("/somePath/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
 
+        //Get lock
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + UploadPluginTask.UPDATE_PLUGINS_FILENAME, recordedRequest.getPath());
+        assertEquals("/somePath/" + LOCK_FILE, recordedRequest.getPath());
 
+        //Delete lock
         recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
-
-        recordedRequest = webServer.takeRequest();
-        assertEquals("/somePath/" + lockFile, recordedRequest.getPath());
+        assertEquals("/somePath/" + LOCK_FILE, recordedRequest.getPath());
     }
 
     @Test
@@ -272,21 +323,18 @@ public class IntellijPublishPluginTest {
 
         builder.build(LOCK_ID).execute();
 
-        //Post file
-        webServer.takeRequest();
-        //check lock
-        webServer.takeRequest();
-        //set lock
-        webServer.takeRequest();
-        //check lock
-        webServer.takeRequest();
-        //check update xml
-        webServer.takeRequest();
+        webServer.takeRequest(); //get lock
+        webServer.takeRequest(); //post lock
+        webServer.takeRequest(); //get lock
+        webServer.takeRequest(); //get update file
+        webServer.takeRequest(); //post plugin
+        webServer.takeRequest(); //post blockmap
+        webServer.takeRequest(); //post hash
 
         RecordedRequest recordedRequest = webServer.takeRequest();
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFile.expected"), Charset.defaultCharset())
-                .replace("{filename}", testFile.getName());
+                .replace("{filename}", testFile.getName()).replace("\r\n", "\n");
         assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 
@@ -303,37 +351,31 @@ public class IntellijPublishPluginTest {
 
         builder.build(LOCK_ID).execute();
 
-        //Post file
-        webServer.takeRequest();
-        //check lock
-        webServer.takeRequest();
-        //set lock
-        webServer.takeRequest();
-        //check lock
-        webServer.takeRequest();
-        //check update xml
-        webServer.takeRequest();
+        webServer.takeRequest(); //get lock
+        webServer.takeRequest(); //post lock
+        webServer.takeRequest(); //get lock
+        webServer.takeRequest(); //get update file
+        webServer.takeRequest(); //post plugin
+        webServer.takeRequest(); //post blockmap
+        webServer.takeRequest(); //post hash
 
         RecordedRequest recordedRequest = webServer.takeRequest();
         String updatePlugin = recordedRequest.getBody().readString(Charset.defaultCharset());
         String expectedFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.expected"), Charset.defaultCharset())
-                .replace("{filename}", testFile.getName());
+                .replace("{filename}", testFile.getName()).replace("\r\n", "\n");
         assertEquals(expectedFile, updatePlugin.substring(updatePlugin.indexOf('\n') + 1));
     }
 
     @Test
     public void testUploadWithPutMethod() throws Exception {
-        builder.setUploadMethod(PluginUploader.UploadMethod.PUT);
+        builder.setRepoType(PluginUploader.RepoType.REST_PUT);
 
         enqueueResponses();
 
         builder.build(LOCK_ID).execute();
 
-        //Put file
-        RecordedRequest recordedRequest = webServer.takeRequest();
-        assertEquals("PUT", recordedRequest.getMethod());
         //check lock
-        recordedRequest = webServer.takeRequest();
+        RecordedRequest recordedRequest = webServer.takeRequest();
         assertEquals("GET", recordedRequest.getMethod());
         //set lock
         recordedRequest = webServer.takeRequest();
@@ -344,6 +386,15 @@ public class IntellijPublishPluginTest {
         //check update xml
         recordedRequest = webServer.takeRequest();
         assertEquals("GET", recordedRequest.getMethod());
+        //Put file
+        recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
+        //Put blockmap
+        recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
+        //Put hash
+        recordedRequest = webServer.takeRequest();
+        assertEquals("PUT", recordedRequest.getMethod());
         //Put update xml
         recordedRequest = webServer.takeRequest();
         assertEquals("PUT", recordedRequest.getMethod());
@@ -355,13 +406,176 @@ public class IntellijPublishPluginTest {
         assertEquals("DELETE", recordedRequest.getMethod());
     }
 
+    @Test
+    public void testOverwritePluginFailsBuild() throws Exception {
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
+        builder.setVersion("0.1");
+
+        String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+
+        //Check for lock
+        webServer.enqueue(new MockResponse().setResponseCode(404));
+        //Set lock
+        webServer.enqueue(new MockResponse().setResponseCode(201));
+        //return lock
+        webServer.enqueue(new MockResponse().setResponseCode(200).setBody(LOCK_ID));
+        //Get updatePlugin.xml
+        webServer.enqueue(new MockResponse().setResponseCode(200).setBody(originalFile));
+        //Get lock
+        webServer.enqueue(new MockResponse().setResponseCode(200).setBody(LOCK_ID));
+        //Delete lock
+        webServer.enqueue(new MockResponse().setResponseCode(204));
+
+        try {
+            builder.build(LOCK_ID).execute();
+            fail("Should have thrown exception");
+        } catch (GradleException e) {
+            assertTrue(e.getMessage().contains("already published to repository"));
+        }
+
+        assertEquals(6, webServer.getRequestCount());
+        //check lock
+        RecordedRequest recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //set lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("POST", recordedRequest.getMethod());
+        //check lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //check update xml
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //check lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+        //Delete lock
+        recordedRequest = webServer.takeRequest();
+        assertEquals("DELETE", recordedRequest.getMethod());
+    }
+
+    @Test
+    public void testOverwritePluginPassesWithAllowOverwrite() throws Exception {
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
+        builder.setVersion("0.1");
+        System.setProperty(PluginUploader.RELEASE_CHECK_PROPERTY, "true");
+
+        try {
+            String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+
+            enqueueResponses(originalFile);
+
+            builder.build(LOCK_ID).execute();
+
+            assertEquals(10, webServer.getRequestCount());
+            //check lock
+            RecordedRequest recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //set lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //check lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //check update xml
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Put file
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put blockmap
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put hash
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put update xml
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //get lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Delete lock
+            recordedRequest = webServer.takeRequest();
+            assertEquals("DELETE", recordedRequest.getMethod());
+        } finally {
+            System.clearProperty(PluginUploader.RELEASE_CHECK_PROPERTY);
+        }
+    }
+
+    @Test
+    public void testOverwritePluginWithUpdateXmlToFalseFailsBuild() throws Exception {
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
+        builder.setVersion("0.1");
+        builder.setUpdatePluginXml(false);
+
+        String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+
+        //Get updatePlugin.xml
+        webServer.enqueue(new MockResponse().setResponseCode(200).setBody(originalFile));
+
+        try {
+            builder.build(LOCK_ID).execute();
+            fail("Should have thrown exception");
+        } catch (GradleException e) {
+            assertTrue(e.getMessage().contains("already published to repository"));
+        }
+
+        assertEquals(1, webServer.getRequestCount());
+        //check update xml
+        RecordedRequest recordedRequest = webServer.takeRequest();
+        assertEquals("GET", recordedRequest.getMethod());
+    }
+
+    @Test
+    public void testOverwritePluginWithUpdateXmlToFalsePassesWithAllowOverwrite() throws Exception {
+        builder.setDescription("testDescription");
+        builder.setChangeNotes("testChangeNotes");
+        builder.setUntilBuild("1.1");
+        builder.setSinceBuild("1.0");
+        builder.setVersion("0.1");
+        builder.setUpdatePluginXml(false);
+        System.setProperty(PluginUploader.RELEASE_CHECK_PROPERTY, "true");
+
+        try {
+            String originalFile = Resources.toString(Resources.getResource("testUpdateXmlFileWithOldVersion.existing"), Charset.defaultCharset());
+
+            enqueueResponses(originalFile);
+
+            builder.build(LOCK_ID).execute();
+
+            assertEquals(4, webServer.getRequestCount());
+            //check update xml
+            RecordedRequest recordedRequest = webServer.takeRequest();
+            assertEquals("GET", recordedRequest.getMethod());
+            //Put file
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put blockmap
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+            //Put hash
+            recordedRequest = webServer.takeRequest();
+            assertEquals("POST", recordedRequest.getMethod());
+        } finally {
+            System.clearProperty(PluginUploader.RELEASE_CHECK_PROPERTY);
+        }
+    }
+
     private void enqueueResponses() {
         enqueueResponses(null);
     }
 
     private void enqueueResponses(String updateXml) {
-        //Upload file
-        webServer.enqueue(new MockResponse().setResponseCode(201));
         //Check for lock
         webServer.enqueue(new MockResponse().setResponseCode(404));
         //Set lock
@@ -374,6 +588,12 @@ public class IntellijPublishPluginTest {
         } else {
             webServer.enqueue(new MockResponse().setResponseCode(200).setBody(updateXml));
         }
+        //Upload file
+        webServer.enqueue(new MockResponse().setResponseCode(201));
+        //Upload blockmap
+        webServer.enqueue(new MockResponse().setResponseCode(201));
+        //Upload hash
+        webServer.enqueue(new MockResponse().setResponseCode(201));
         //Post updatePlugin
         webServer.enqueue(new MockResponse().setResponseCode(201));
         //return lock

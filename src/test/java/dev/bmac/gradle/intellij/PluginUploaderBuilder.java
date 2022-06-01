@@ -1,5 +1,6 @@
 package dev.bmac.gradle.intellij;
 
+import dev.bmac.gradle.intellij.repos.Repo;
 import org.gradle.api.logging.Logger;
 
 import java.io.File;
@@ -19,76 +20,101 @@ public class PluginUploaderBuilder {
     private Boolean updatePluginXml = true;
     private String sinceBuild;
     private String untilBuild;
-    private PluginUploader.UploadMethod uploadMethod = PluginUploader.UploadMethod.POST;
+    private PluginUploader.RepoType repoType = PluginUploader.RepoType.REST_POST;
     private Logger logger;
+    private Repo repo = null;
+    private File blockmapFile;
+    private File hashFile;
 
-    public PluginUploaderBuilder(String url, String pluginName, File file, String pluginId, String version, Logger logger) {
+    public PluginUploaderBuilder(String url, String pluginName, File file, File blockmap, File hash,
+                                 String pluginId, String version, Logger logger) {
         this.url = url;
         this.pluginName = pluginName;
         this.file = file;
+        this.blockmapFile = blockmap;
+        this.hashFile = hash;
         this.pluginId = pluginId;
         this.version = version;
         this.logger = logger;
     }
 
-    public void setUrl(String url) {
+    public PluginUploaderBuilder setUrl(String url) {
         this.url = url;
+        return this;
     }
 
-    public void setAbsoluteDownloadUrls(final boolean absoluteDownloadUrls) {
+    public PluginUploaderBuilder setAbsoluteDownloadUrls(final boolean absoluteDownloadUrls) {
         this.absoluteDownloadUrls = absoluteDownloadUrls;
+        return this;
     }
 
-    public void setPluginName(String pluginName) {
+    public PluginUploaderBuilder setPluginName(String pluginName) {
         this.pluginName = pluginName;
+        return this;
     }
 
-    public void setFile(File file) {
+    public PluginUploaderBuilder setFile(File file) {
         this.file = file;
+        return this;
     }
 
-    public void setUpdateFile(String updateFile) {
+    public PluginUploaderBuilder setUpdateFile(String updateFile) {
         this.updateFile = updateFile;
+        return this;
     }
 
-    public void setPluginId(String pluginId) {
+    public PluginUploaderBuilder setPluginId(String pluginId) {
         this.pluginId = pluginId;
+        return this;
     }
 
-    public void setVersion(String version) {
+    public PluginUploaderBuilder setVersion(String version) {
         this.version = version;
+        return this;
     }
 
-    public void setAuthentication(String authentication) {
+    public PluginUploaderBuilder setAuthentication(String authentication) {
         this.authentication = authentication;
+        return this;
     }
 
-    public void setDescription(String description) {
+    public PluginUploaderBuilder setDescription(String description) {
         this.description = description;
+        return this;
     }
 
-    public void setChangeNotes(String changeNotes) {
+    public PluginUploaderBuilder setChangeNotes(String changeNotes) {
         this.changeNotes = changeNotes;
+        return this;
     }
 
-    public void setUpdatePluginXml(Boolean updatePluginXml) {
+    public PluginUploaderBuilder setUpdatePluginXml(Boolean updatePluginXml) {
         this.updatePluginXml = updatePluginXml;
+        return this;
     }
 
-    public void setSinceBuild(String sinceBuild) {
+    public PluginUploaderBuilder setSinceBuild(String sinceBuild) {
         this.sinceBuild = sinceBuild;
+        return this;
     }
 
-    public void setUntilBuild(String untilBuild) {
+    public PluginUploaderBuilder setUntilBuild(String untilBuild) {
         this.untilBuild = untilBuild;
+        return this;
     }
 
-    public void setUploadMethod(PluginUploader.UploadMethod uploadMethod) {
-        this.uploadMethod = uploadMethod;
+    public PluginUploaderBuilder setRepoType(PluginUploader.RepoType repoType) {
+        this.repoType = repoType;
+        return this;
     }
 
-    public void setLogger(Logger logger) {
+    public PluginUploaderBuilder setLogger(Logger logger) {
         this.logger = logger;
+        return this;
+    }
+
+    public void setRepo(Repo repo) {
+        this.repo = repo;
     }
 
     public String getUrl() {
@@ -143,8 +169,8 @@ public class PluginUploaderBuilder {
         return untilBuild;
     }
 
-    public PluginUploader.UploadMethod getUploadMethod() {
-        return uploadMethod;
+    public PluginUploader.RepoType getRepoType() {
+        return repoType;
     }
 
     public Logger getLogger() {
@@ -154,10 +180,19 @@ public class PluginUploaderBuilder {
     public PluginUploader build(String lockId) throws Exception {
         return new PluginUploader(1, 2, logger, url, absoluteDownloadUrls, pluginName, file,
                 updateFile, pluginId, version, authentication, description, changeNotes, updatePluginXml,
-                sinceBuild, untilBuild, uploadMethod) {
+                sinceBuild, untilBuild, repoType, blockmapFile, hashFile) {
             @Override
             protected String getLockId() {
                 return lockId;
+            }
+
+            @Override
+            protected Repo getRepoType() {
+                if (repo == null) {
+                    return super.getRepoType();
+                } else {
+                    return repo;
+                }
             }
         };
     }

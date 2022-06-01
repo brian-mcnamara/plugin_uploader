@@ -5,10 +5,8 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.*;
 
 import javax.inject.Inject;
 
@@ -62,9 +60,18 @@ public class UploadPluginTask extends ConventionTask {
     @Input
     @Optional
     public final Property<String> untilBuild;
-    //HTTP method used for uploading files
+    //Repo type to use
     @Input
     @Optional
+    public final Property<PluginUploader.RepoType> repoType;
+
+
+    /**
+     * @deprecated Update to use repoType
+     */
+    @Input
+    @Optional
+    @Deprecated
     public final Property<PluginUploader.UploadMethod> uploadMethod;
 
     @Inject
@@ -82,13 +89,35 @@ public class UploadPluginTask extends ConventionTask {
         updatePluginXml = objectFactory.property(Boolean.class);
         sinceBuild = objectFactory.property(String.class);
         untilBuild = objectFactory.property(String.class);
+        repoType = objectFactory.property(PluginUploader.RepoType.class);
         uploadMethod = objectFactory.property(PluginUploader.UploadMethod.class);
     }
 
 
     @TaskAction
     public void execute() throws Exception {
-        new PluginUploader(1000, 5, getLogger(),
+        Logger logger = getLogger();
+
+        //TODO clean up once uploadMethod is removed
+        PluginUploader.RepoType rt = repoType.getOrElse(PluginUploader.RepoType.REST_POST);
+        if (uploadMethod.isPresent() && repoType.isPresent()) {
+            logger.error("repoType and uploadMethod can not both be used. Remove uploadMethod as its deprecated");
+        } if (uploadMethod.isPresent()) {
+            logger.warn("DEPRECATED: uploadMethod has been migrated to repoType. It may be removed in future releases");
+            switch (uploadMethod.get()) {
+                case POST:
+                    rt = PluginUploader.RepoType.REST_POST;
+                    break;
+                case PUT:
+                    rt = PluginUploader.RepoType.REST_PUT;
+                    break;
+            }
+        }
+
+        GenerateBlockMapTask bmt = getProject().getTasks()
+                .named(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class).get();
+
+        new PluginUploader(1000, 5, logger,
                 url.get(),
                 absoluteDownloadUrls.getOrElse(false),
                 pluginName.get(),
@@ -102,7 +131,9 @@ public class UploadPluginTask extends ConventionTask {
                 updatePluginXml.getOrElse(true),
                 sinceBuild.getOrNull(),
                 untilBuild.getOrNull(),
-                uploadMethod.getOrElse(PluginUploader.UploadMethod.POST)).execute();
+                rt,
+                bmt.blockmapFile.getAsFile().get(),
+                bmt.blockmapHashFile.getAsFile().get()).execute();
     }
 
     public Property<String> getUrl() {
@@ -157,6 +188,11 @@ public class UploadPluginTask extends ConventionTask {
         return untilBuild;
     }
 
+    public Property<PluginUploader.RepoType> getRepoType() {
+        return repoType;
+    }
+
+    @Deprecated
     public Property<PluginUploader.UploadMethod> getUploadMethod() {
         return uploadMethod;
     }

@@ -1,22 +1,14 @@
 package dev.bmac.gradle.intellij;
 
-import com.github.rholder.retry.Attempt;
-import com.github.rholder.retry.RetryException;
-import com.github.rholder.retry.RetryListener;
-import com.github.rholder.retry.Retryer;
-import com.github.rholder.retry.RetryerBuilder;
-import com.github.rholder.retry.StopStrategies;
-import com.github.rholder.retry.WaitStrategies;
+import com.github.rholder.retry.*;
+import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
+import dev.bmac.gradle.intellij.repos.Repo;
+import dev.bmac.gradle.intellij.repos.RestRepo;
+import dev.bmac.gradle.intellij.repos.S3Repo;
 import dev.bmac.gradle.intellij.xml.PluginElement;
 import dev.bmac.gradle.intellij.xml.PluginsElement;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -25,12 +17,9 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -41,11 +30,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Business logic to manage and upload files related to intellij plugins, such as updatePlugins.xml, plugin archive,
+ * blockmap archive and hash file.
+ */
 public class PluginUploader {
+
+    public static final String TASK_NAME = "uploadPlugin";
+
+    //System property to allow skipping the check which prevents replacing a released release.
+    public static final String RELEASE_CHECK_PROPERTY = "dev.bmac.pluginUploader.skipReleaseCheck";
 
     static final String UNKNOWN_VERSION = "UNKNOWN";
     static final String LOCK_FILE_EXTENSION = ".lock";
-    private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
 
     private final Marshaller marshaller;
     private final Unmarshaller unmarshaller;
@@ -66,14 +63,19 @@ public class PluginUploader {
     private final Boolean updatePluginXml;
     private final String sinceBuild;
     private final String untilBuild;
-    private final UploadMethod uploadMethod;
+    private final RepoType repoType;
+    private final File blockmapFile;
+    private final File hashFile;
+
+    private final boolean skipReleaseCheck = Boolean.parseBoolean(System.getProperty(RELEASE_CHECK_PROPERTY, "false"));
+    private final Repo repo;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
                           @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
                           @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
                           @NotNull String version, String authentication, String description, String changeNotes,
                           @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
-                          @NotNull UploadMethod uploadMethod) throws Exception {
+                          @NotNull RepoType repoType, File blockmapFile, File hashFile) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
@@ -91,7 +93,9 @@ public class PluginUploader {
         this.updatePluginXml = updatePluginXml;
         this.sinceBuild = sinceBuild;
         this.untilBuild = untilBuild;
-        this.uploadMethod = uploadMethod;
+        this.repoType = repoType;
+        this.blockmapFile = blockmapFile;
+        this.hashFile = hashFile;
 
         JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
 
@@ -100,8 +104,13 @@ public class PluginUploader {
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 
         unmarshaller = contextObj.createUnmarshaller();
+
+        this.repo = getRepoType();
     }
 
+    /**
+     * Main execution
+     */
     void execute() {
         if (url == null || pluginName == null ||
                 file == null || pluginId == null || version == null) {
@@ -111,11 +120,18 @@ public class PluginUploader {
             throw new RuntimeException("updateFile can not be null");
         }
 
-        postPlugin();
-        if (updatePluginXml) {
+        if (!updatePluginXml) {
+            //Prevent replacing a already published version based on the plugin xml.
+            try {
+                getPluginsThrowIfOverwrite();
+            } catch (FatalException e) {
+                throw new GradleException(e.getMessage(), e);
+            }
+            uploadPlugin();
+        } else {
             final AtomicReference<Throwable> firstException = new AtomicReference<>();
             Retryer<Void> retryer = RetryerBuilder.<Void>newBuilder()
-                    .retryIfException()
+                    .retryIfException(e -> !(e instanceof FatalException))
                     .withStopStrategy(StopStrategies.stopAfterAttempt(retryTimes))
                     .withWaitStrategy(WaitStrategies.fixedWait(timeoutMs, TimeUnit.MILLISECONDS))
                     .withRetryListener(new RetryListener() {
@@ -129,37 +145,38 @@ public class PluginUploader {
                     .build();
             try {
                 retryer.call(() -> {
-                    postUpdateXml();
+                    postPluginAndUpdateXml();
                     return null;
                 });
             } catch (ExecutionException | RetryException e) {
                 Throwable cause = firstException.get();
-                throw new GradleException("Failed to update " + file, cause != null ? cause : e);
+                if (cause instanceof FatalException) {
+                    throw new GradleException(cause.getMessage(), cause);
+                }
+                throw new GradleException("Failed to publish plugin", cause != null ? cause : e);
             }
         }
     }
 
-    void postUpdateXml() {
-        String lock = null;
+    /**
+     * Creates a lock, grabs the current updatePlugins.xml, ensures there is not a version conflict,
+     * uploads the plugin file, uploads the updated updatePlugins.xml and deletes the lock at the end
+     * @throws RetryableException
+     * @throws FatalException
+     */
+    void postPluginAndUpdateXml() throws RetryableException, FatalException {
+        String lock = uploadLockThrows();
+
         try {
-            lock = getLock();
-            if (lock != null) {
-                lock = null;
-                throw new GradleException("Lock exists on host. Can not proceed until lock file is cleared." +
-                        " This could be another process currently running.");
-            }
-            lock = getLockId();
-            setLock(lock);
-            //TODO better lock safety
-            if (!lock.equals(getLock())) {
-                lock = null;
-                throw new GradleException("Another process claimed the lock while we were trying to claim it. Please try again later.");
-            }
+            PluginsElement plugins = getPluginsThrowIfOverwrite();
+
+            uploadPlugin();
+
             PluginElement plugin = new PluginElement(pluginId, version, description, changeNotes, pluginName,
                     sinceBuild, untilBuild, file, absoluteDownloadUrls ? url : ".");
-            PluginsElement updates = getUpdates();
-            PluginUpdatesUtil.updateOrAdd(plugin, updates.getPlugins(), logger);
-            postUpdates(updates);
+            PluginUpdatesUtil.updateOrAdd(plugin, plugins.getPlugins(), logger);
+
+            uploadUpdates(plugins);
         } finally {
             if (lock != null) {
                 if (lock.equals(getLock())) {
@@ -170,45 +187,38 @@ public class PluginUploader {
                             .build();
                     try {
                         retryer.call(() -> {
-                            clearLock();
+                            deleteLock();
                             return null;
                         });
                     } catch (ExecutionException | RetryException e) {
-                        logger.error("Failed to cleanup " + file + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
+                        throw new FatalException("Failed to cleanup " + file + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
                     }
                 } else {
-                    logger.error("The lock value changed during execution. This is bad! " + file + " may be invalid");
+                    throw new FatalException("The lock value changed during execution. This is bad! The release may be invalid");
                 }
             }
         }
     }
 
-    void postPlugin() {
-        String pluginEndpoint = pluginName + "/" + file.getName();
-
-        RequestBody requestBody = RequestBody.create(file, MediaType.parse("application/zip"));
-
+    /**
+     * Uploads the plugin file
+     */
+    void uploadPlugin() {
         try {
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + pluginEndpoint)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to upload plugin with status: " + response.code());
-                }
-            }
+            repo.upload(pluginName + "/" + file.getName(), file, "application/zip");
+            repo.upload(pluginName + "/" + blockmapFile.getName(), blockmapFile, "application/zip");
+            repo.upload(pluginName + "/" + hashFile.getName(), hashFile, "application/json");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    void postUpdates(PluginsElement updates) {
+    /**
+     * Uploads the updatePlugins.xml file adding a comment on top to indicate the time, this gradle plugins version,
+     * and plugin used to update the file
+     * @param updates The updatePlugins.xml POJO to marshal
+     */
+    void uploadUpdates(PluginsElement updates) {
         try {
             File file = File.createTempFile("updatePlugins", null);
             file.deleteOnExit();
@@ -231,78 +241,60 @@ public class PluginUploader {
                 marshaller.marshal(updates, fw);
             }
 
-            String fileName = updateFile;
-
-            RequestBody requestBody = RequestBody.create(file, MediaType.parse("application/xml"));
-
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + fileName)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new RuntimeException("Failed to upload " + fileName + " with status: " + response.code());
-                }
-            }
+            repo.upload(updateFile, file, "application/xml");
         } catch (IOException | JAXBException e) {
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * Grabs the latest updatePlugin.xml from the repo and unmarshaling it.
+     * Returns an empty POJO if the file does not exist in the repo
+     * @return The unmarshaled file from the repo or an empty one if it does not exist
+     */
     PluginsElement getUpdates() {
         try {
-            Request request = new Request.Builder()
-                    .url(url + "/" + updateFile)
-                    .get()
-                    .build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (response.code() == 404) {
+            return repo.get(updateFile, update -> {
+                if (update.exists()) {
+                    try {
+                        return (PluginsElement) unmarshaller.unmarshal(update.getInputStream());
+                    } catch (JAXBException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
                     logger.info("No " + updateFile + " found. Creating new file.");
                     return new PluginsElement();
-                } else if (response.isSuccessful()) {
-                    ResponseBody body = response.body();
-                    if (body == null) {
-                        throw new RuntimeException("Body was null for " + updateFile);
-                    }
-                    return (PluginsElement) unmarshaller.unmarshal(body.byteStream());
-                } else {
-                    throw new RuntimeException("Received an unknown status code while retrieving " + updateFile);
                 }
-
-            }
-        } catch (IOException | JAXBException e) {
+            });
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * Grabs the lock file from the repo and returns the contents
+     * @return The locks content or null if it does not exist.
+     */
     @Nullable
     String getLock() {
         try {
-            Request request = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .get()
-                    .build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (response.code() == 404) {
-                    return null;
-                } else if (response.isSuccessful()) {
-                    ResponseBody body = response.body();
-                    if (body == null) {
-                        return "";
+            return repo.get(updateFile + LOCK_FILE_EXTENSION, l -> {
+                if (l.exists()) {
+                    ByteSource bs = new ByteSource() {
+                        @Override
+                        public InputStream openStream() {
+                            return l.getInputStream();
+                        }
+                    };
+                    try {
+                        return bs.asCharSource(StandardCharsets.UTF_8).read();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
-                    return body.string();
                 } else {
-                    throw new RuntimeException("Received an unknown status code while retrieving lock file, status: " + response.code());
+                    return null;
                 }
-
-            }
+            });
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -310,59 +302,86 @@ public class PluginUploader {
 
     /**
      * Upload the lock to the server.
-     * Note: This does not thow exceptions. It is expected to check the lock after this method is called to verify this
+     * Note: This does not throw exceptions. It is expected to check the lock after this method is called to verify this
      * process acquired the lock.
      */
     void setLock(String lockValue) {
+        File lockFile = null;
         try {
-            RequestBody requestBody = RequestBody.create(lockValue, MediaType.parse("text/plain"));
-
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .method(uploadMethod.name(), requestBody);
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
+            lockFile = Files.createTempFile(pluginId, "lock").toFile();
+            try (FileOutputStream fos = new FileOutputStream(lockFile)) {
+                fos.write(lockValue.getBytes(StandardCharsets.UTF_8));
             }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Failed to upload lock with status: " + response.code());
-                }
-            }
+            repo.upload(updateFile + LOCK_FILE_EXTENSION, lockFile, "text/plain");
         } catch (IOException e) {
             logger.error("Failed to upload lock file which will cause this process to fail when we read back the lock", e);
+        } finally {
+            if (lockFile != null) {
+                lockFile.delete();
+            }
         }
     }
 
-    void clearLock() throws IOException {
-        try {
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url + "/" + updateFile + LOCK_FILE_EXTENSION)
-                    .delete();
-
-            if (authentication != null) {
-                requestBuilder.addHeader("Authorization", authentication);
-            }
-            Request request = requestBuilder.build();
-
-            try (Response response = CLIENT.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Failed to delete lock with status: " + response.code());
-                }
-            }
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to parse the host", e);
-        }
+    /**
+     * Deletes the lock on the server
+     * @throws IOException
+     */
+    void deleteLock() throws IOException {
+        repo.delete(updateFile + LOCK_FILE_EXTENSION);
     }
 
-    String getUrl() {
-        return url;
+    /**
+     * Ensure the lock does not exist, throwing if it exists, and sets the lock by uploading the lock file to the repo
+     * @return the lock key
+     */
+    String uploadLockThrows() throws RetryableException {
+        String lock = getLock();
+        if (lock != null) {
+            throw new RetryableException("Lock exists on host. Can not proceed until lock file is cleared." +
+                    " This could be another process currently running.");
+        }
+        lock = getLockId();
+        setLock(lock);
+        //TODO better lock safety
+        if (!lock.equals(getLock())) {
+            throw new RetryableException("Another process claimed the lock while we were trying to claim it. Please try again later.");
+        }
+        return lock;
+    }
+
+    /**
+     * Returns the plugins xml from the repo checking if the plugin being published exists and throws exception if
+     * allowOverwrite is set to false (default)
+     * @throws if the plugin ID and plugin version being published exists in the plugin xml from the repo
+     * @return the plugins xml from the repository
+     */
+    PluginsElement getPluginsThrowIfOverwrite() throws FatalException {
+        PluginsElement plugins = getUpdates();
+        boolean pluginVersionExistsInRepo = plugins.getPlugins().stream().anyMatch(plugin ->
+                pluginId.equals(plugin.getId()) && version.equals(plugin.getVersion()));
+
+        //Prevent replacing published versions.
+        if (!skipReleaseCheck && pluginVersionExistsInRepo) {
+            throw new FatalException("Plugin '" + pluginId + "' with version " + version + " already published to repository." +
+                    " Publish attempt aborted to prevent overwriting the release. See the readme of this plugin for more info.");
+        }
+        return plugins;
     }
 
     protected String getLockId() {
         return UUID.randomUUID().toString();
+    }
+
+    protected Repo getRepoType() {
+        switch (repoType) {
+            case REST_POST:
+            case REST_PUT:
+                return new RestRepo(url, authentication, repoType);
+            case S3:
+                return new S3Repo(url, authentication);
+            default:
+                throw new IllegalStateException("Upload method not implemented for " + repoType.name());
+        }
     }
 
     static String getPluginVersion() {
@@ -378,8 +397,34 @@ public class PluginUploader {
         return UNKNOWN_VERSION;
     }
 
+    public enum RepoType {
+        REST_POST,
+        REST_PUT,
+        S3
+    }
+
+    /**
+     * @deprecated Migrated to using RepoType
+     */
+    @Deprecated
     public enum UploadMethod {
         POST,
         PUT;
+    }
+
+    private static class FatalException extends Exception {
+        public FatalException(String message) {
+            super(message);
+        }
+
+        public FatalException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    private static class RetryableException extends Exception {
+        public RetryableException(String message) {
+            super(message);
+        }
     }
 }
