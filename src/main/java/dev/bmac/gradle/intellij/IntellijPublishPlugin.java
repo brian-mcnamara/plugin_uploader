@@ -15,12 +15,15 @@ public class IntellijPublishPlugin implements Plugin<Project> {
     public void apply(Project project) {
         TaskProvider<UploadPluginTask> uploadPluginTaskTaskProvider =
                 project.getTasks().register(PluginUploader.TASK_NAME, UploadPluginTask.class);
-        project.getTasks().register(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class).configure(it -> {
-            it.file.set(uploadPluginTaskTaskProvider.get().file);
-        });
+        TaskProvider<GenerateBlockMapTask> generateBlockMapTaskTaskProvider =
+                project.getTasks().register(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class);
+
         uploadPluginTaskTaskProvider.configure(it -> {
-            it.dependsOn(project.getTasks()
-                    .named(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class));
+            it.dependsOn(generateBlockMapTaskTaskProvider);
+        });
+
+        generateBlockMapTaskTaskProvider.configure(it -> {
+            it.file.set(uploadPluginTaskTaskProvider.get().file);
         });
     }
 }

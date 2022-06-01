@@ -16,9 +16,12 @@ plugins {
     id "dev.bmac.intellij.plugin-uploader" version "1.3.0"
 }
 
+generateBlockMap{
+  // Depend on either signPlugin or buildPlugin, depending on which task provides the file in the uploadPlugin
+  dependsOn(project.tasks.named("signPlugin"))
+}
+
 uploadPlugin {
-    // Depend on either signPlugin or buildPlugin. 
-    dependsOn(project.tasks.named('signPlugin'))
     def signPluginTask = project.tasks.named("signPlugin").get() as SignPluginTask
     // Get the plugin distribution file from the signPlugin task provided from the gradle-intellij-plugin
     def archive = signPluginTask.outputArchiveFile.asFile
