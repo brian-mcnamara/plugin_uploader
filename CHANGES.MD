@@ -1,5 +1,8 @@
 # Change log
 
+## 1.3.1
+### Fixed
+- Fixed compatibility with intellij-gradle-plugin version 1.6.0 which added strict okhttp dependency version
 ## 1.3.0
 ### Added
 * Treat versions in updatePlugins.xml as immutable. uploadPlugin will fail iff an entry in updatePlugins.xml matches the plugin id and version
