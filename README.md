@@ -13,7 +13,7 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.3.0"
+    id "dev.bmac.intellij.plugin-uploader" version "1.3.1"
 }
 
 generateBlockMap{
