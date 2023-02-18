@@ -1,13 +1,11 @@
 package dev.bmac.gradle.intellij;
 
-import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import java.io.File;
 import java.io.FileWriter;
@@ -34,10 +32,7 @@ public abstract class BasePluginUploaderTest {
 
     BasePluginUploaderTest() throws Exception {
         logger = Logging.getLogger(IntellijPublishPluginTest.class);
-        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
-        marshaller = contextObj.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+        marshaller = PluginUpdatesUtil.MARSHALLER;
     }
 
     @Before

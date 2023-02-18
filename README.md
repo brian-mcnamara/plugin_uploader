@@ -13,10 +13,10 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.3.1"
+    id "dev.bmac.intellij.plugin-uploader" version "1.3.2"
 }
 
-generateBlockMap{
+generateBlockMap {
   // Depend on either signPlugin or buildPlugin, depending on which task provides the file in the uploadPlugin
   dependsOn(project.tasks.named("signPlugin"))
 }
@@ -101,6 +101,26 @@ and to exclude the <kbd>untilBuild</kbd> parameter as this plugin will take care
 It should be noted, specifying <kbd>untilBuild</kbd> is possible while using multi-version, however the until-build version may be changed
 at a later time to a lower build version (for example, if a new entry specifies a since-build which is before the current entries 
 until-build, the until-build will be updated to a build before the new entries since-build)
+
+## Updating local updatePlugins.xml
+
+A task is registered as part of this plugin which can be used to update a file based updatePlugins.xml
+This can be useful when hosting plugins in source control over a dedicated repository.
+
+### Usage
+
+```groovy
+tasks.named('updatePluginsXml') {
+  updateFile.set(file('updatePlugins.xml'))
+  downloadUrl.set('http://example.com/plugins/pluginFile.zip')
+  pluginName.set('PluginName')
+  pluginId.set(project.group)
+  version.set(project.version)
+  pluginDescription.set(file('description.txt').text)
+  changeNotes.set(file('change-notes.txt').text)
+  sinceBuild.set("211")
+}
+```
 
 ## Notes
 

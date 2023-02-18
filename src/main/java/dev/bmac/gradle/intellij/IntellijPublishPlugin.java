@@ -18,6 +18,8 @@ public class IntellijPublishPlugin implements Plugin<Project> {
         TaskProvider<GenerateBlockMapTask> generateBlockMapTaskTaskProvider =
                 project.getTasks().register(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class);
 
+        project.getTasks().register(UpdateXmlTask.TASK_NAME, UpdateXmlTask.class);
+
         uploadPluginTaskTaskProvider.configure(it -> {
             it.dependsOn(generateBlockMapTaskTaskProvider);
         });
