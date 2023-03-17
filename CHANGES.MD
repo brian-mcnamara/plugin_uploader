@@ -1,5 +1,8 @@
 # Change log
 
+## 1.3.2
+### Added
+- Added `UpdatePluginsXml` task to allow updating file-based updatePlugins.xml
 ## 1.3.1
 ### Fixed
 - Fixed compatibility with intellij-gradle-plugin version 1.6.0 which added strict okhttp dependency version

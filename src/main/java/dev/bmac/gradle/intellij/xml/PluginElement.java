@@ -22,9 +22,15 @@ public class PluginElement {
 
     public PluginElement(String id, String version, String description, String changeNotes,
                          String pluginName, String sinceBuild, String untilBuild, File file, String baseUrl) {
-        this.id = id;
         // The base URL is already escaped because we are using it elsewhere unescaped
-        this.url = baseUrl + "/" + UrlEscapers.urlFragmentEscaper().escape(pluginName + "/" + file.getName());
+        this(id, version, description, changeNotes, pluginName, sinceBuild, untilBuild,
+                baseUrl + "/" + UrlEscapers.urlFragmentEscaper().escape(pluginName + "/" + file.getName()));
+    }
+
+    public PluginElement(String id, String version, String description, String changeNotes,
+                         String pluginName, String sinceBuild, String untilBuild, String url) {
+        this.id = id;
+        this.url = url;
         this.version = version;
         this.description = description;
         this.changeNotes = changeNotes;

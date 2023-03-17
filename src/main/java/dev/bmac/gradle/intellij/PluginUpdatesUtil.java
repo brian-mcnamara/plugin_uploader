@@ -5,8 +5,13 @@ import com.google.common.collect.Maps;
 import com.intellij.openapi.util.BuildNumber;
 import dev.bmac.gradle.intellij.xml.IdeaVersionElement;
 import dev.bmac.gradle.intellij.xml.PluginElement;
+import dev.bmac.gradle.intellij.xml.PluginsElement;
 import org.gradle.api.logging.Logger;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +22,22 @@ import java.util.Objects;
  */
 public class PluginUpdatesUtil {
     public static final BuildNumber MIN_VERSION = Objects.requireNonNull(BuildNumber.fromString("193.2956.37"));
+    public static final Marshaller MARSHALLER;
+    public static final Unmarshaller UNMARSHALLER;
+
+    static {
+        try {
+            JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
+            MARSHALLER = contextObj.createMarshaller();
+            MARSHALLER.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+            MARSHALLER.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+
+            UNMARSHALLER = contextObj.createUnmarshaller();
+        } catch (JAXBException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 
     /**

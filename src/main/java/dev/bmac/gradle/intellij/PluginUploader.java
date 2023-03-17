@@ -44,8 +44,6 @@ public class PluginUploader {
     static final String UNKNOWN_VERSION = "UNKNOWN";
     static final String LOCK_FILE_EXTENSION = ".lock";
 
-    private final Marshaller marshaller;
-    private final Unmarshaller unmarshaller;
     private final int timeoutMs;
     private final int retryTimes;
     private final Logger logger;
@@ -97,14 +95,6 @@ public class PluginUploader {
         this.blockmapFile = blockmapFile;
         this.hashFile = hashFile;
 
-        JAXBContext contextObj = JAXBContext.newInstance(PluginsElement.class);
-
-        marshaller = contextObj.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
-
-        unmarshaller = contextObj.createUnmarshaller();
-
         this.repo = getRepoType();
     }
 
@@ -121,7 +111,7 @@ public class PluginUploader {
         }
 
         if (!updatePluginXml) {
-            //Prevent replacing a already published version based on the plugin xml.
+            //Prevent replacing an already published version based on the plugin xml.
             try {
                 getPluginsThrowIfOverwrite();
             } catch (FatalException e) {
@@ -238,7 +228,7 @@ public class PluginUploader {
                         .append(pluginVersion)
                         .append(" -->\n");
 
-                marshaller.marshal(updates, fw);
+                PluginUpdatesUtil.MARSHALLER.marshal(updates, fw);
             }
 
             repo.upload(updateFile, file, "application/xml");
@@ -257,7 +247,7 @@ public class PluginUploader {
             return repo.get(updateFile, update -> {
                 if (update.exists()) {
                     try {
-                        return (PluginsElement) unmarshaller.unmarshal(update.getInputStream());
+                        return (PluginsElement) PluginUpdatesUtil.UNMARSHALLER.unmarshal(update.getInputStream());
                     } catch (JAXBException e) {
                         throw new RuntimeException(e);
                     }
