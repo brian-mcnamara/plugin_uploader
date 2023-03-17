@@ -37,7 +37,7 @@ public class UpdateXmlTaskTest {
                 "  id 'java'\n" +
                 "  id 'dev.bmac.intellij.plugin-uploader'\n" +
                 "}\n" +
-                "tasks.named('updatePluginsXml') {" +
+                "task updateLocalPluginFile(type:dev.bmac.gradle.intellij.UpdateXmlTask) {" +
                 "    updateFile.set(file('updatePlugins.xml'))\n" +
                 "    downloadUrl.set('http://example.com')\n" +
                 "    pluginName.set('testPlugin')\n" +
@@ -51,7 +51,7 @@ public class UpdateXmlTaskTest {
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput()
-                .withArguments("--stacktrace", "updatePluginsXml").build();
+                .withArguments("--stacktrace", "updateLocalPluginFile").build();
 
         assertTrue(testFile.exists());
 
@@ -80,7 +80,7 @@ public class UpdateXmlTaskTest {
                 "  id 'java'\n" +
                 "  id 'dev.bmac.intellij.plugin-uploader'\n" +
                 "}\n" +
-                "tasks.named('updatePluginsXml') {" +
+                "task updateLocalPluginFile(type:dev.bmac.gradle.intellij.UpdateXmlTask) {" +
                 "    updateFile.set(file('updatePlugins.xml'))\n" +
                 "    downloadUrl.set('http://example.com')\n" +
                 "    pluginName.set('testPlugin')\n" +
@@ -95,7 +95,7 @@ public class UpdateXmlTaskTest {
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withPluginClasspath().forwardOutput()
-                .withArguments("--stacktrace", "updatePluginsXml").build();
+                .withArguments("--stacktrace", "updateLocalPluginFile").build();
 
         PluginsElement pluginsElement = (PluginsElement) PluginUpdatesUtil.UNMARSHALLER.unmarshal(testFile);
         assertEquals(1, pluginsElement.getPlugins().size());

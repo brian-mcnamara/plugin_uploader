@@ -102,7 +102,7 @@ It should be noted, specifying <kbd>untilBuild</kbd> is possible while using mul
 at a later time to a lower build version (for example, if a new entry specifies a since-build which is before the current entries 
 until-build, the until-build will be updated to a build before the new entries since-build)
 
-## Updating local updatePlugins.xml
+## Updating a local file-based updatePlugins.xml
 
 A task is registered as part of this plugin which can be used to update a file based updatePlugins.xml
 This can be useful when hosting plugins in source control over a dedicated repository.
@@ -110,7 +110,7 @@ This can be useful when hosting plugins in source control over a dedicated repos
 ### Usage
 
 ```groovy
-tasks.named('updatePluginsXml') {
+task updateLocalPluginXml(type:dev.bmac.gradle.intellij.UpdateXmlTask) {
   updateFile.set(file('updatePlugins.xml'))
   downloadUrl.set('http://example.com/plugins/pluginFile.zip')
   pluginName.set('PluginName')

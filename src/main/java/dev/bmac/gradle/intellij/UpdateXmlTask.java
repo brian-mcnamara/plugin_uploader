@@ -15,8 +15,6 @@ import java.io.File;
 
 public class UpdateXmlTask extends ConventionTask {
 
-    public static final String TASK_NAME = "updatePluginsXml";
-
     //Name of the plugin update file.
     @Input
     public final RegularFileProperty updateFile;
