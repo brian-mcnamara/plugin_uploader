@@ -1,5 +1,8 @@
 # Change log
 
+## 1.3.3
+### Fixed
+- Fixed `UpdatePluginsXml` incorrectly specifying @Input for an output file.
 ## 1.3.2
 ### Added
 - Added `UpdatePluginsXml` task to allow updating file-based updatePlugins.xml
