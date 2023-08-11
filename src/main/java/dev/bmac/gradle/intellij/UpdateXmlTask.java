@@ -8,6 +8,7 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import javax.inject.Inject;
@@ -16,7 +17,7 @@ import java.io.File;
 public class UpdateXmlTask extends ConventionTask {
 
     //Name of the plugin update file.
-    @Input
+    @OutputFile
     public final RegularFileProperty updateFile;
     //The relative or full url where the plugin-version can be downloaded
     @Input
