@@ -9,6 +9,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
+import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,8 +25,8 @@ public class S3Repo extends Repo {
     final String region;
     final AmazonS3 client;
 
-    public S3Repo(String baseRepoPath, String authentication) {
-        super(getBaseKeyPath(baseRepoPath), authentication);
+    public S3Repo(String baseRepoPath, String authentication, Logger logger) {
+        super(getBaseKeyPath(baseRepoPath), authentication, logger);
 
         AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
 
@@ -74,6 +75,8 @@ public class S3Repo extends Repo {
             if (e.getStatusCode() == 404) {
                 return converter.apply(RepoObject.empty());
             }
+            logger.error("Failed to get object '" + relativePath + "', response code from s3: " + e.getStatusCode() +
+                        " message: " + e.getMessage());
             throw new IOException("Failed to get object from s3", e);
         }
     }

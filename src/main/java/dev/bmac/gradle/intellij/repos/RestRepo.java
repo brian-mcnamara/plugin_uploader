@@ -1,7 +1,13 @@
 package dev.bmac.gradle.intellij.repos;
 
 import dev.bmac.gradle.intellij.PluginUploader;
-import okhttp3.*;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,8 +19,8 @@ import java.util.function.Function;
 public class RestRepo extends Repo {
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().build();
     private final String method;
-    public RestRepo(String baseRepoPath, String authentication, PluginUploader.RepoType repoType) {
-        super(baseRepoPath, authentication);
+    public RestRepo(String baseRepoPath, String authentication, PluginUploader.RepoType repoType, Logger logger) {
+        super(baseRepoPath, authentication, logger);
         switch (repoType) {
             case REST_POST:
                 method = "POST";
@@ -48,6 +54,7 @@ public class RestRepo extends Repo {
                 }
                 object = RepoObject.of(body.byteStream());
             } else {
+                logger.error("While getting '" + relativePath + "' the server returned status code: " + response.code());
                 throw new RuntimeException("Received an unknown status code while retrieving " + relativePath);
             }
             return converter.apply(object);
@@ -67,6 +74,7 @@ public class RestRepo extends Repo {
 
         try (Response response = CLIENT.newCall(request).execute()) {
             if (!response.isSuccessful()) {
+                logger.error("Failed to upload '" + relativePath + "', server returned status code: " + response.code());
                 throw new IOException("Failed to upload plugin with status: " + response.code());
             }
         }
@@ -86,6 +94,7 @@ public class RestRepo extends Repo {
 
         try (Response response = CLIENT.newCall(request).execute()) {
             if (!response.isSuccessful()) {
+                logger.error("Failed to delete '" + relativePath + "', Server returned status code: " + response.code());
                 throw new IOException("Failed to delete lock with status: " + response.code());
             }
         }

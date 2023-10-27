@@ -1,6 +1,12 @@
 package dev.bmac.gradle.intellij;
 
-import com.github.rholder.retry.*;
+import com.github.rholder.retry.Attempt;
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.RetryListener;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.WaitStrategies;
 import com.google.common.io.ByteSource;
 import com.google.common.io.CharStreams;
 import com.sun.istack.Nullable;
@@ -13,11 +19,13 @@ import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.DateFormat;
@@ -181,7 +189,7 @@ public class PluginUploader {
                             return null;
                         });
                     } catch (ExecutionException | RetryException e) {
-                        throw new FatalException("Failed to cleanup " + file + LOCK_FILE_EXTENSION + ". File must be cleaned up manually", e);
+                        throw new FatalException("Failed to delete " + updateFile + LOCK_FILE_EXTENSION + ". File must be cleaned up manually on repository", e);
                     }
                 } else {
                     throw new FatalException("The lock value changed during execution. This is bad! The release may be invalid");
@@ -366,9 +374,9 @@ public class PluginUploader {
         switch (repoType) {
             case REST_POST:
             case REST_PUT:
-                return new RestRepo(url, authentication, repoType);
+                return new RestRepo(url, authentication, repoType, logger);
             case S3:
-                return new S3Repo(url, authentication);
+                return new S3Repo(url, authentication, logger);
             default:
                 throw new IllegalStateException("Upload method not implemented for " + repoType.name());
         }

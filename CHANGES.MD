@@ -1,5 +1,9 @@
 # Change log
 
+## 1.3.4
+### Changed
+- Updated lock cleanup error message to indicate correct file
+- Updated error logging for repository operations
 ## 1.3.3
 ### Fixed
 - Fixed `UpdatePluginsXml` incorrectly specifying @Input for an output file.
