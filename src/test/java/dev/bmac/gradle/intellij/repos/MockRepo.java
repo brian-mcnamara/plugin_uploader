@@ -3,10 +3,11 @@ package dev.bmac.gradle.intellij.repos;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
+import org.gradle.api.logging.Logger;
 
 public class MockRepo extends Repo {
-    public MockRepo(String baseRepoPath, String authentication) {
-        super(baseRepoPath, authentication);
+    public MockRepo(String baseRepoPath, String authentication, Logger logger) {
+        super(baseRepoPath, authentication, logger);
     }
 
     @Override
