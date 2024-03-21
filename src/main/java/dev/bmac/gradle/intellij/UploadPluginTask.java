@@ -5,7 +5,6 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.*;
 
 import javax.inject.Inject;
@@ -16,6 +15,10 @@ public class UploadPluginTask extends ConventionTask {
     //The (encoded) url of the repository where updatePlugins.xml and the plugin zips will be placed
     @Input
     public final Property<String> url;
+    //Prefix of download urls in updatePlugins.xml (optional)
+    @Input
+    @Optional
+    public final Property<String> downloadUrlPrefix;
     //Use absolute path for the download url in update plugins xml ($url/$pluginName/${file.getName})
     @Input
     @Optional
@@ -78,6 +81,7 @@ public class UploadPluginTask extends ConventionTask {
     public UploadPluginTask(ObjectFactory objectFactory) {
         url = objectFactory.property(String.class);
         absoluteDownloadUrls = objectFactory.property(Boolean.class);
+        downloadUrlPrefix = objectFactory.property(String.class);
         pluginName = objectFactory.property(String.class);
         file = objectFactory.fileProperty();
         updateFile = objectFactory.property(String.class);
@@ -119,6 +123,7 @@ public class UploadPluginTask extends ConventionTask {
 
         new PluginUploader(1000, 5, logger,
                 url.get(),
+                downloadUrlPrefix.getOrNull(),
                 absoluteDownloadUrls.getOrElse(false),
                 pluginName.get(),
                 file.get().getAsFile(),
@@ -138,6 +143,10 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<String> getUrl() {
         return url;
+    }
+
+    public Property<String> getDownloadUrlPrefix() {
+        return downloadUrlPrefix;
     }
 
     public Property<Boolean> getAbsoluteDownloadUrls() {
