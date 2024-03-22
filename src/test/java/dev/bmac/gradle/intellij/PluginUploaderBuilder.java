@@ -8,6 +8,7 @@ import java.io.File;
 public class PluginUploaderBuilder {
 
     private String url;
+    private String downloadUrlPrefix;
     private boolean absoluteDownloadUrls = false;
     private String pluginName;
     private File file;
@@ -40,6 +41,11 @@ public class PluginUploaderBuilder {
 
     public PluginUploaderBuilder setUrl(String url) {
         this.url = url;
+        return this;
+    }
+
+    public PluginUploaderBuilder setDownloadUrlPrefix(final String downloadUrlPrefix) {
+        this.downloadUrlPrefix = downloadUrlPrefix;
         return this;
     }
 
@@ -121,6 +127,10 @@ public class PluginUploaderBuilder {
         return url;
     }
 
+    public String getDownloadUrlPrefix() {
+        return downloadUrlPrefix;
+    }
+
     public boolean isAbsoluteDownloadUrls() {
         return absoluteDownloadUrls;
     }
@@ -178,9 +188,9 @@ public class PluginUploaderBuilder {
     }
 
     public PluginUploader build(String lockId) throws Exception {
-        return new PluginUploader(1, 2, logger, url, absoluteDownloadUrls, pluginName, file,
-                updateFile, pluginId, version, authentication, description, changeNotes, updatePluginXml,
-                sinceBuild, untilBuild, repoType, blockmapFile, hashFile) {
+        return new PluginUploader(1, 2, logger, url, downloadUrlPrefix, absoluteDownloadUrls,
+                pluginName, file, updateFile, pluginId, version, authentication, description, changeNotes,
+                updatePluginXml, sinceBuild, untilBuild, repoType, blockmapFile, hashFile) {
             @Override
             protected String getLockId() {
                 return lockId;

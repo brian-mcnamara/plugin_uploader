@@ -57,7 +57,7 @@ public class PluginUploader {
     private final Logger logger;
 
     private final String url;
-    private final boolean absoluteDownloadUrls;
+    private final String downloadUrlPrefix;
     private final String pluginName;
     private final File file;
     private final String updateFile;
@@ -77,17 +77,16 @@ public class PluginUploader {
     private final Repo repo;
 
     public PluginUploader(int timeoutMs, int retryTimes, Logger logger,
-                          @NotNull String url, boolean absoluteDownloadUrls, @NotNull String pluginName,
-                          @NotNull File file, @NotNull String updateFile, @NotNull String pluginId,
-                          @NotNull String version, String authentication, String description, String changeNotes,
-                          @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
+                          @NotNull String url, String downloadUrlPrefix, Boolean absoluteDownloadUrls,
+                          @NotNull String pluginName, @NotNull File file, @NotNull String updateFile,
+                          @NotNull String pluginId, @NotNull String version, String authentication, String description,
+                          String changeNotes, @NotNull Boolean updatePluginXml, String sinceBuild, String untilBuild,
                           @NotNull RepoType repoType, File blockmapFile, File hashFile) throws Exception {
 
         this.timeoutMs = timeoutMs;
         this.retryTimes = retryTimes;
         this.logger = logger;
         this.url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-        this.absoluteDownloadUrls = absoluteDownloadUrls;
         this.pluginName = pluginName;
         this.file = file;
         this.updateFile = updateFile;
@@ -103,6 +102,7 @@ public class PluginUploader {
         this.blockmapFile = blockmapFile;
         this.hashFile = hashFile;
 
+        this.downloadUrlPrefix = getDownloadUrlPrefix(url, downloadUrlPrefix, absoluteDownloadUrls);
         this.repo = getRepoType();
     }
 
@@ -171,7 +171,7 @@ public class PluginUploader {
             uploadPlugin();
 
             PluginElement plugin = new PluginElement(pluginId, version, description, changeNotes, pluginName,
-                    sinceBuild, untilBuild, file, absoluteDownloadUrls ? url : ".");
+                    sinceBuild, untilBuild, file, downloadUrlPrefix);
             PluginUpdatesUtil.updateOrAdd(plugin, plugins.getPlugins(), logger);
 
             uploadUpdates(plugins);
@@ -380,6 +380,17 @@ public class PluginUploader {
             default:
                 throw new IllegalStateException("Upload method not implemented for " + repoType.name());
         }
+    }
+
+    private static String getDownloadUrlPrefix(@NotNull String url, String userPrefix, boolean absoluteDownloadUrls) {
+        if (absoluteDownloadUrls) {
+            return url;
+        }
+        if (userPrefix != null) {
+            boolean hasTrailingSlash = userPrefix.endsWith("/");
+            return hasTrailingSlash ? userPrefix.substring(0, userPrefix.length() - 1) : userPrefix;
+        }
+        return ".";
     }
 
     static String getPluginVersion() {
