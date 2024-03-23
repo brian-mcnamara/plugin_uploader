@@ -1,4 +1,4 @@
-[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/dev.bmac.intellij.plugin-uploader?color=green&label=Gradle%20Plugin%20Portal&logo=gradle)][gradle-plugin-page]
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/dev.bmac.intellij.plugin-uploader?color=green&label=Gradle%20Plugin%20Portal&logo=gradle)](https://plugins.gradle.org/plugin/dev.bmac.intellij.plugin-uploader)
 
 # IntelliJ plugin uploader
 
