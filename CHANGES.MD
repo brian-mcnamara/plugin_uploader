@@ -1,9 +1,12 @@
 # Change log
 
 ## 1.3.4
+### Added
+- Added downloadUrlPrefix to specify the plugin file download location prefix.
 ### Changed
 - Updated lock cleanup error message to indicate correct file
 - Updated error logging for repository operations
+- Deprecated absoluteDownloadUrls in favor of downloadUrlPrefix
 ## 1.3.3
 ### Fixed
 - Fixed `UpdatePluginsXml` incorrectly specifying @Input for an output file.

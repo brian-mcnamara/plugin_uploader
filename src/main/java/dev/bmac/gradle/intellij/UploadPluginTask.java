@@ -19,9 +19,13 @@ public class UploadPluginTask extends ConventionTask {
     @Input
     @Optional
     public final Property<String> downloadUrlPrefix;
-    //Use absolute path for the download url in update plugins xml ($url/$pluginName/${file.getName})
+    /**
+     * Use absolute path for the download url in update plugins xml ($url/$pluginName/${file.getName})
+     * @deprecated switch to downloadUrlPrefix=${url}
+     */
     @Input
     @Optional
+    @Deprecated()
     public final Property<Boolean> absoluteDownloadUrls;
     //The plugin name
     @Input

@@ -1,3 +1,5 @@
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/dev.bmac.intellij.plugin-uploader?color=green&label=Gradle%20Plugin%20Portal&logo=gradle)][gradle-plugin-page]
+
 # IntelliJ plugin uploader
 
 A gradle plugin to automate uploading an IntelliJ plugin and updating updatePlugins.xml hosted on a private repository,
@@ -13,7 +15,7 @@ buildscript {
 }
 
 plugins {
-    id "dev.bmac.intellij.plugin-uploader" version "1.3.3"
+    id "dev.bmac.intellij.plugin-uploader" version "1.3.4"
 }
 
 generateBlockMap {
@@ -64,7 +66,8 @@ uploadPlugin {
 | <kbd>updateFile</kbd> - Overrides the default updatePlugins.xml file name. <br/><br/><b>Note:</b> See [Publishing a Plugin to a Custom Plugin Repository](https://jetbrains.org/intellij/sdk/docs/basics/getting_started/update_plugins_format.html#describing-your-plugins-in-updatepluginsxml-file) for more information about updatePlugins.xml | **Required:** false <br/> **Default:** <kbd>updatePlugins.xml</kbd> <br/> **Acceptable Values:** Any String                                                                                                                                          |
 | <kbd>updatePluginXml</kbd> - Gates whether updatePlugins.xml is updated.                                                                                                                                                                                                                                                                           | **Required:** false <br/> **Default:** <kbd>true</kbd> <br/> **Acceptable Values:** `true` / `false`                                                                                                                                                 |
 | <kbd>repoType</kbd> - Sets the type of repository operations to use.                                                                                                                                                                                                                                                                               | **Required:** false <br/> **Default:** <kbd>REST_POST</kbd> <br/> **Acceptable Values:** <ul> <li>REST_POST</li><li>REST_PUT</li><li>S3</li></ul>                                                                                                    |
-| <kbd>absoluteDownloadUrls</kbd> - Use absolute url to the plugin download in update plugins xml over relative paths.                                                                                                                                                                                                                               | **Required:** false <br/> **Default:** <kbd>false</kbd> <br/> **Acceptable Values:** `true` / `false`                                                                                                                                                |
+| <kbd>absoluteDownloadUrls</kbd> - **deprecated**: see downloadUrlPrefix <br/> Use absolute url to the plugin download in update plugins xml over relative paths.                                                                                                                                                                                   | **Required:** false <br/> **Default:** <kbd>false</kbd> <br/> **Acceptable Values:** `true` / `false`                                                                                                                                                |
+| <kbd>downloadUrlPrefix</kbd> - Allows specifying the download url prefix to use over the default relative path.                                                                                                                                                                                                                                    | **Required:** false <br/> **Default:** *none* <br/> **Acceptable Values:** A URL prefix, for example: <ul> <li> `https://repo.example.com/intellij/plugins`</li> <li> `/intellij/plugins` </li> <ul>                                                 |
 
 
 ## Supported repo types
