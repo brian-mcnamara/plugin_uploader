@@ -37,9 +37,9 @@ public final class BuildNumber implements Comparable<BuildNumber> {
         }
 
         for (int each : myComponents) {
-            if (each != SNAPSHOT_VALUE) {
-                builder.append(each);
-            }
+            //Changed - removing the SNAPSHOT check to allow writing `*` back out
+            builder.append(each != SNAPSHOT_VALUE ? each : STAR);
+
             builder.append('.');
         }
         if (builder.charAt(builder.length() - 1) == '.') {

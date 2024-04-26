@@ -248,6 +248,30 @@ public class PluginUpdatesUtilTest {
         assertEquals("randomId", plugins.get(7).getId());
     }
 
+    @Test
+    public void testPluginWithWildcardUntilBuild() {
+        addPluginToList(TEST_VERSION, "200.1", "241.*");
+
+        assertEquals(1, pluginsElement.getPlugins().size());
+
+        assertEquals("241.*", getPluginVersion(TEST_VERSION, pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
+    @Test
+    public void testPluginWithWildcardUntilBuildAfterUpdate() {
+        addPluginToList(TEST_VERSION, "200.1", "241.*");
+        addPluginToList("1.0.1", "241.2", "241.*");
+        addPluginToList("1.0.2", "242", "242.*");
+        addPluginToList("1.0.3", "242.2.100", "242.*");
+
+        assertEquals(4, pluginsElement.getPlugins().size());
+
+        assertEquals("241.1", getPluginVersion(TEST_VERSION, pluginsElement).getVersionInfo().getUntilBuildString());
+        assertEquals("241.*", getPluginVersion("1.0.1", pluginsElement).getVersionInfo().getUntilBuildString());
+        assertEquals("242.2.99", getPluginVersion("1.0.2", pluginsElement).getVersionInfo().getUntilBuildString());
+        assertEquals("242.*", getPluginVersion("1.0.3", pluginsElement).getVersionInfo().getUntilBuildString());
+    }
+
 
     private void addPluginToList(String version, String since, String until) {
         addPluginToList(TEST_ID, version, since, until);
