@@ -1,5 +1,8 @@
 # Change log
 
+## 1.2.5
+### Fixed
+- Fixed upload plugin task calling project.tasks which causes issues in bazel cache
 ## 1.3.4
 ### Added
 - Added downloadUrlPrefix to specify the plugin file download location prefix.
