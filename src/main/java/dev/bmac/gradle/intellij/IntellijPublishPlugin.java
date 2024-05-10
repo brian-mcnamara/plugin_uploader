@@ -20,6 +20,8 @@ public class IntellijPublishPlugin implements Plugin<Project> {
 
         uploadPluginTaskTaskProvider.configure(it -> {
             it.dependsOn(generateBlockMapTaskTaskProvider);
+            it.blockmapFile.set(generateBlockMapTaskTaskProvider.get().blockmapFile);
+            it.blockmapHashFile.set(generateBlockMapTaskTaskProvider.get().blockmapHashFile);
         });
 
         generateBlockMapTaskTaskProvider.configure(it -> {

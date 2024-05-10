@@ -5,7 +5,10 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.*;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.TaskAction;
 
 import javax.inject.Inject;
 
@@ -72,7 +75,6 @@ public class UploadPluginTask extends ConventionTask {
     @Optional
     public final Property<PluginUploader.RepoType> repoType;
 
-
     /**
      * @deprecated Update to use repoType
      */
@@ -80,6 +82,15 @@ public class UploadPluginTask extends ConventionTask {
     @Optional
     @Deprecated
     public final Property<PluginUploader.UploadMethod> uploadMethod;
+
+
+    /**
+     * Internal inputs
+     */
+    @InputFile
+    public final RegularFileProperty blockmapFile;
+    @InputFile
+    final RegularFileProperty blockmapHashFile;
 
     @Inject
     public UploadPluginTask(ObjectFactory objectFactory) {
@@ -99,6 +110,8 @@ public class UploadPluginTask extends ConventionTask {
         untilBuild = objectFactory.property(String.class);
         repoType = objectFactory.property(PluginUploader.RepoType.class);
         uploadMethod = objectFactory.property(PluginUploader.UploadMethod.class);
+        blockmapFile = objectFactory.fileProperty();
+        blockmapHashFile = objectFactory.fileProperty();
     }
 
 
@@ -122,9 +135,6 @@ public class UploadPluginTask extends ConventionTask {
             }
         }
 
-        GenerateBlockMapTask bmt = getProject().getTasks()
-                .named(GenerateBlockMapTask.TASK_NAME, GenerateBlockMapTask.class).get();
-
         new PluginUploader(1000, 5, logger,
                 url.get(),
                 downloadUrlPrefix.getOrNull(),
@@ -141,8 +151,8 @@ public class UploadPluginTask extends ConventionTask {
                 sinceBuild.getOrNull(),
                 untilBuild.getOrNull(),
                 rt,
-                bmt.blockmapFile.getAsFile().get(),
-                bmt.blockmapHashFile.getAsFile().get()).execute();
+                blockmapFile.getAsFile().get(),
+                blockmapHashFile.getAsFile().get()).execute();
     }
 
     public Property<String> getUrl() {
@@ -203,6 +213,14 @@ public class UploadPluginTask extends ConventionTask {
 
     public Property<PluginUploader.RepoType> getRepoType() {
         return repoType;
+    }
+
+    public RegularFileProperty getBlockmapFile() {
+        return blockmapFile;
+    }
+
+    public RegularFileProperty getBlockmapHashFile() {
+        return blockmapHashFile;
     }
 
     @Deprecated
